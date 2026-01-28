@@ -1,6 +1,18 @@
 # ⚡ SETUP RÁPIDO - Supabase
 
-Ahora que Supabase está configurado en la app, **NECESITAS** crear las tablas en la base de datos.
+## 🔴 CRÍTICO PRIMERO: Desactivar Email Verification
+
+Si estás viendo errores de registro, **PRIMERO haz esto:**
+
+1. Ve a: https://app.supabase.com/project/illzdmhlkhnooykecqkv/auth/providers
+2. Busca **"Email"** en la lista de providers
+3. En la sección **"Email Confirmations"**, desactiva:
+   - ☑️ Uncheck "Confirm email"
+4. Haz clic en **"Save"**
+
+⚠️ **IMPORTANTE:** Esto es solo para DESARROLLO. En producción, vuelve a activar email verification.
+
+---
 
 ## Paso 1️⃣: Ejecutar supabase-setup.sql
 
