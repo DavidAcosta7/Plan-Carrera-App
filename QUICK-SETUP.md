@@ -2,15 +2,29 @@
 
 ## 🔴 CRÍTICO PRIMERO: Desactivar Email Verification
 
-Si estás viendo errores de registro, **PRIMERO haz esto:**
+Si estás viendo errores de registro, **PRIMERO haz esto en Supabase:**
 
+### Opción 1: Desactivar Email Confirmation (Recomendado)
 1. Ve a: https://app.supabase.com/project/illzdmhlkhnooykecqkv/auth/providers
-2. Busca **"Email"** en la lista de providers
-3. En la sección **"Email Confirmations"**, desactiva:
-   - ☑️ Uncheck "Confirm email"
+2. Busca el provider **"Email"**
+3. **Desactiva:** "Confirm email" (uncheck the box)
 4. Haz clic en **"Save"**
 
-⚠️ **IMPORTANTE:** Esto es solo para DESARROLLO. En producción, vuelve a activar email verification.
+### Opción 2: Desactivar SMTP (Si Opción 1 no funciona)
+1. Ve a: https://app.supabase.com/project/illzdmhlkhnooykecqkv/settings/auth
+2. En **"Email"** section, busca **"SMTP Settings"**
+3. **Desactiva el SMTP** o configura un servidor dummy
+4. Esto evitará que Supabase intente enviar emails
+
+### Opción 3: Usar Test Users (Para desarrollo rápido)
+1. En el mismo panel de providers
+2. Habilita **"Test Users"** (si está disponible en tu plan)
+3. Crea usuarios de test que no requieren emails
+
+⚠️ **IMPORTANTE:** 
+- Esto es solo para DESARROLLO
+- En producción, vuelve a activar email verification
+- Si ves error "429 Too Many Requests", el rate limit de emails se reinicia en ~15-60 minutos
 
 ---
 

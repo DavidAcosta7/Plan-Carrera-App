@@ -507,14 +507,26 @@
                         console.error('❌ Error en Supabase Auth:', authResult.error);
                         
                         // Mensaje especial para rate limiting
-                        if (authResult.error && authResult.error.includes('10 seconds')) {
-                            window.showNotification('⏳ Espera 10 segundos antes de intentar nuevamente', 'error', 6000);
+                        if (authResult.retryAfter) {
+                            const minutes = Math.ceil(authResult.retryAfter / 60);
+                            window.showNotification(`⏳ Demasiados intentos. Por favor espera ${minutes} minuto(s) antes de intentar nuevamente.`, 'error', 8000);
+                            // Deshabilitar botón temporalmente
+                            submitBtn.disabled = true;
+                            submitBtn.textContent = `Reintenta en ${minutes}m`;
+                            setTimeout(() => {
+                                submitBtn.disabled = false;
+                                submitBtn.textContent = originalText;
+                            }, authResult.retryAfter * 1000);
+                        } else if (authResult.error && authResult.error.includes('email')) {
+                            window.showNotification('⚠️ Problema con el email. Verifica que sea un email válido.', 'error', 6000);
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = originalText;
                         } else {
                             window.showNotification(authResult.error || 'Error al registrar', 'error');
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = originalText;
                         }
                         
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = originalText;
                         return;
                     }
 

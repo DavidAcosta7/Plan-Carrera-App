@@ -61,7 +61,15 @@
                 // Validar que response.ok (200-299) y que data.user exista
                 if (!response.ok) {
                     console.error('❌ Error en signup (HTTP ' + response.status + '):', data);
-                    const errorMsg = data.message || data.error || data.error_description || 'Error en registro';
+                    
+                    // Manejo especial para rate limiting
+                    if (response.status === 429) {
+                        const errorMsg = 'Demasiados intentos de registro. Por favor espera unos minutos antes de intentar nuevamente.';
+                        console.warn('⏳ Rate limit alcanzado:', data.msg);
+                        return { success: false, error: errorMsg, retryAfter: 300 }; // 5 minutos
+                    }
+                    
+                    const errorMsg = data.message || data.error || data.error_description || data.msg || 'Error en registro';
                     return { success: false, error: errorMsg };
                 }
                 
