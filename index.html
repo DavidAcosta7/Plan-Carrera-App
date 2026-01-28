@@ -105,6 +105,17 @@
                     }
                     this.container.innerHTML = content;
                     this.executeScripts();
+                    
+                    // Inicializar handlers después de renderizar
+                    if (window.initRegisterForm && document.getElementById('registerForm')) {
+                        window.initRegisterForm();
+                    }
+                    if (window.initLoginForm && document.getElementById('loginForm')) {
+                        window.initLoginForm();
+                    }
+                    if (window.initDashboardForm && document.getElementById('phasesContainer')) {
+                        window.initDashboardForm();
+                    }
                 } catch (error) {
                     console.error('Error rendering route:', error);
                     this.container.innerHTML = '<div class="error">Error cargando la página</div>';
@@ -381,6 +392,171 @@
             if (el) el.scrollIntoView({ behavior: 'smooth' });
         };
 
+        // Inicializar handlers de formularios cuando se rendericen
+        window.initRegisterForm = function() {
+            const form = document.getElementById('registerForm');
+            if (!form) return;
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const submitBtn = document.getElementById('submitBtn');
+                
+                // Evitar múltiples submits
+                if (submitBtn.disabled) {
+                    console.log('⏳ El formulario ya está siendo procesado...');
+                    return;
+                }
+                
+                submitBtn.disabled = true;
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = '⏳ Registrando...';
+                
+                const formData = new FormData(form);
+                const name = formData.get('name');
+                const email = formData.get('email');
+                const password = formData.get('password');
+                const confirmPassword = formData.get('confirmPassword');
+
+                if (password !== confirmPassword) {
+                    window.showNotification('Las contraseñas no coinciden', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                    return;
+                }
+
+                if (!name || !email || !password) {
+                    window.showNotification('Por favor completa todos los campos', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                    return;
+                }
+
+                try {
+                    console.log('🔄 Iniciando registro para:', email);
+                    
+                    // Verificar que Supabase está configurado
+                    if (!window.supabase.isConfigured) {
+                        console.error('❌ Supabase no está configurado');
+                        window.showNotification('⚠️ Supabase no está configurado. Configura variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY', 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalText;
+                        return;
+                    }
+                    
+                    console.log('✅ Supabase está configurado');
+                    
+                    // Primero registrar en Supabase Auth
+                    console.log('📝 Registrando en Supabase Auth...');
+                    const authResult = await window.supabase.signUp(email, password);
+                    
+                    if (!authResult.success) {
+                        console.error('❌ Error en Supabase Auth:', authResult.error);
+                        
+                        // Mensaje especial para rate limiting
+                        if (authResult.error.includes('10 seconds')) {
+                            window.showNotification('⏳ Espera 10 segundos antes de intentar nuevamente', 'error', 6000);
+                        } else {
+                            window.showNotification(authResult.error || 'Error al registrar', 'error');
+                        }
+                        
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalText;
+                        return;
+                    }
+
+                    const userId = authResult.user.id;
+                    console.log('✅ Usuario creado en Auth con ID:', userId);
+
+                    // Luego crear el registro en tabla users
+                    console.log('📤 Insertando en tabla users...');
+                    const userResult = await window.supabase.post('users', {
+                        id: userId,
+                        email: email,
+                        name: name,
+                        password_hash: 'managed_by_supabase_auth',
+                        role: 'user',
+                        has_plan: false,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    });
+
+                    if (!userResult.success) {
+                        console.error('❌ Error al insertar en tabla users:', userResult.error);
+                        window.showNotification('Cuenta registrada en Auth pero error al guardar perfil. Error: ' + userResult.error, 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalText;
+                        return;
+                    }
+
+                    console.log('✅ Usuario insertado en tabla users');
+
+                    // Guardar usuario en localStorage también (para modo offline)
+                    window.auth.register({ name, email, password });
+                    
+                    console.log('✅ Registro completado exitosamente');
+                    window.showNotification('¡Cuenta creada exitosamente!', 'success');
+                    setTimeout(() => {
+                        window.router.navigate('/onboarding');
+                    }, 1500);
+                } catch (error) {
+                    console.error('❌ Error en registro:', error);
+                    window.showNotification('Error al crear la cuenta. Intenta nuevamente. Error: ' + error.message, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            });
+        };
+
+        window.initLoginForm = function() {
+            const form = document.getElementById('loginForm');
+            if (!form) return;
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                
+                if (!email || !password) {
+                    window.showNotification('Por favor completa todos los campos', 'error');
+                    return;
+                }
+                
+                try {
+                    // Intentar login en Supabase primero
+                    const supabaseResult = await window.supabase.signIn(email, password);
+                    
+                    if (supabaseResult.success) {
+                        // Login exitoso en Supabase
+                        window.showNotification('¡Bienvenido!', 'success');
+                        
+                        // Guardar también en localStorage para compatibilidad
+                        const user = { id: supabaseResult.user.id, email: email };
+                        localStorage.setItem('user', JSON.stringify(user));
+                        
+                        setTimeout(() => {
+                            window.router.navigate('/dashboard');
+                        }, 500);
+                    } else {
+                        // Si falla Supabase, intentar con localStorage (fallback)
+                        const user = window.auth.login(email, password);
+                        if (user) {
+                            window.showNotification('¡Bienvenido!', 'success');
+                            setTimeout(() => {
+                                window.router.navigate('/dashboard');
+                            }, 500);
+                        } else {
+                            window.showNotification('Email o contraseña incorrectos', 'error');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error en login:', error);
+                    window.showNotification('Error al iniciar sesión', 'error');
+                }
+            });
+        };
+
         // Contenido de las páginas (inline para evitar CORS)
         const landingContent = `
 <div class="landing-page">
@@ -540,118 +716,6 @@
         </div>
     </div>
 </div>
-
-<script>
-document.getElementById('registerForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const submitBtn = document.getElementById('submitBtn');
-    
-    // Evitar múltiples submits
-    if (submitBtn.disabled) {
-        console.log('⏳ El formulario ya está siendo procesado...');
-        return;
-    }
-    
-    submitBtn.disabled = true;
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = '⏳ Registrando...';
-    
-    const formData = new FormData(this);
-    const name = formData.get('name');
-    const email = formData.get('email');
-    const password = formData.get('password');
-    const confirmPassword = formData.get('confirmPassword');
-
-    if (password !== confirmPassword) {
-        showNotification('Las contraseñas no coinciden', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-        return;
-    }
-
-    if (!name || !email || !password) {
-        showNotification('Por favor completa todos los campos', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-        return;
-    }
-
-    try {
-        console.log('🔄 Iniciando registro para:', email);
-        
-        // Verificar que Supabase está configurado
-        if (!window.supabase.isConfigured) {
-            console.error('❌ Supabase no está configurado');
-            window.showNotification('⚠️ Supabase no está configurado. Configura variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY', 'error');
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-            return;
-        }
-        
-        console.log('✅ Supabase está configurado');
-        
-        // Primero registrar en Supabase Auth
-        console.log('📝 Registrando en Supabase Auth...');
-        const authResult = await window.supabase.signUp(email, password);
-        
-        if (!authResult.success) {
-            console.error('❌ Error en Supabase Auth:', authResult.error);
-            
-            // Mensaje especial para rate limiting
-            if (authResult.error.includes('10 seconds')) {
-                window.showNotification('⏳ Espera 10 segundos antes de intentar nuevamente', 'error', 6000);
-            } else {
-                window.showNotification(authResult.error || 'Error al registrar', 'error');
-            }
-            
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-            return;
-        }
-
-        const userId = authResult.user.id;
-        console.log('✅ Usuario creado en Auth con ID:', userId);
-
-        // Luego crear el registro en tabla users
-        console.log('📤 Insertando en tabla users...');
-        const userResult = await window.supabase.post('users', {
-            id: userId,
-            email: email,
-            name: name,
-            password_hash: 'managed_by_supabase_auth',
-            role: 'user',
-            has_plan: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        });
-
-        if (!userResult.success) {
-            console.error('❌ Error al insertar en tabla users:', userResult.error);
-            window.showNotification('Cuenta registrada en Auth pero error al guardar perfil. Error: ' + userResult.error, 'error');
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-            return;
-        }
-
-        console.log('✅ Usuario insertado en tabla users');
-
-        // Guardar usuario en localStorage también (para modo offline)
-        window.auth.register({ name, email, password });
-        
-        console.log('✅ Registro completado exitosamente');
-        window.showNotification('¡Cuenta creada exitosamente!', 'success');
-        setTimeout(() => {
-            window.router.navigate('/onboarding');
-        }, 1500);
-    } catch (error) {
-        console.error('❌ Error en registro:', error);
-        window.showNotification('Error al crear la cuenta. Intenta nuevamente. Error: ' + error.message, 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-    }
-});
-</script>
         `;
 
         const loginContent = `
@@ -726,52 +790,6 @@ document.getElementById('registerForm').addEventListener('submit', async functio
         </div>
     </div>
 </div>
-
-<script>
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    
-    if (!email || !password) {
-        window.showNotification('Por favor completa todos los campos', 'error');
-        return;
-    }
-    
-    try {
-        // Intentar login en Supabase primero
-        const supabaseResult = await window.supabase.signIn(email, password);
-        
-        if (supabaseResult.success) {
-            // Login exitoso en Supabase
-            window.showNotification('¡Bienvenido!', 'success');
-            
-            // Guardar también en localStorage para compatibilidad
-            const user = { id: supabaseResult.user.id, email: email };
-            localStorage.setItem('user', JSON.stringify(user));
-            
-            setTimeout(() => {
-                window.router.navigate('/dashboard');
-            }, 500);
-        } else {
-            // Si falla Supabase, intentar con localStorage (fallback)
-            const user = window.auth.login(email, password);
-            if (user) {
-                window.showNotification('¡Bienvenido!', 'success');
-                setTimeout(() => {
-                    window.router.navigate('/dashboard');
-                }, 500);
-            } else {
-                window.showNotification('Email o contraseña incorrectos', 'error');
-            }
-        }
-    } catch (error) {
-        console.error('Error en login:', error);
-        window.showNotification('Error al iniciar sesión', 'error');
-    }
-});
-</script>
         `;
 
         const onboardingContent = `
