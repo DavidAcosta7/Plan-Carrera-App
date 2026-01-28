@@ -11,6 +11,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Supabase Client -->
+    <script src="utils/supabase-client.js"></script>
 </head>
 <body>
     <!-- Pantalla de carga FUERA de #app para que no se destruya al renderizar -->
@@ -528,28 +531,62 @@ function scrollToFeatures() {
 </div>
 
 <script>
-document.getElementById('registerForm').addEventListener('submit', function(e) {
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
-    const userData = {
-        name: formData.get('name'),
-        email: formData.get('email'),
-        password: formData.get('password')
-    };
+    const name = formData.get('name');
+    const email = formData.get('email');
+    const password = formData.get('password');
+    const confirmPassword = formData.get('confirmPassword');
 
-    if (userData.password !== formData.get('confirmPassword')) {
+    if (password !== confirmPassword) {
         showNotification('Las contraseñas no coinciden', 'error');
         return;
     }
 
+    if (!name || !email || !password) {
+        showNotification('Por favor completa todos los campos', 'error');
+        return;
+    }
+
     try {
-        auth.register(userData);
+        // Primero registrar en Supabase Auth
+        const authResult = await supabase.signUp(email, password);
+        
+        if (!authResult.success) {
+            showNotification(authResult.error || 'Error al registrar', 'error');
+            return;
+        }
+
+        const userId = authResult.user.id;
+
+        // Luego crear el registro en tabla users
+        const userResult = await supabase.post('users', {
+            id: userId,
+            email: email,
+            name: name,
+            password_hash: 'managed_by_supabase_auth',
+            role: 'user',
+            has_plan: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        });
+
+        if (!userResult.success) {
+            showNotification('Cuenta registrada pero error en tabla users. Contacta soporte.', 'error');
+            return;
+        }
+
+        // Guardar usuario en localStorage también (para modo offline)
+        auth.register({ name, email, password });
+        
         showNotification('¡Cuenta creada exitosamente!', 'success');
         setTimeout(() => {
             router.navigate('/onboarding');
         }, 1500);
     } catch (error) {
+        console.error('Error en registro:', error);
         showNotification('Error al crear la cuenta. Intenta nuevamente.', 'error');
     }
 });
@@ -630,7 +667,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
 </div>
 
 <script>
-document.getElementById('loginForm').addEventListener('submit', function(e) {
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const email = document.getElementById('loginEmail').value;
@@ -642,16 +679,34 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
     }
     
     try {
-        const user = auth.login(email, password);
-        if (user) {
+        // Intentar login en Supabase primero
+        const supabaseResult = await supabase.signIn(email, password);
+        
+        if (supabaseResult.success) {
+            // Login exitoso en Supabase
             showNotification('¡Bienvenido!', 'success');
+            
+            // Guardar también en localStorage para compatibilidad
+            const user = { id: supabaseResult.user.id, email: email };
+            localStorage.setItem('user', JSON.stringify(user));
+            
             setTimeout(() => {
                 router.navigate('/dashboard');
             }, 500);
         } else {
-            showNotification('Email o contraseña incorrectos', 'error');
+            // Si falla Supabase, intentar con localStorage (fallback)
+            const user = auth.login(email, password);
+            if (user) {
+                showNotification('¡Bienvenido!', 'success');
+                setTimeout(() => {
+                    router.navigate('/dashboard');
+                }, 500);
+            } else {
+                showNotification('Email o contraseña incorrectos', 'error');
+            }
         }
     } catch (error) {
+        console.error('Error en login:', error);
         showNotification('Error al iniciar sesión', 'error');
     }
 });
