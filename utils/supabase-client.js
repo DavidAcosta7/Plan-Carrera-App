@@ -9,6 +9,8 @@ class SupabaseClient {
         
         if (!this.isConfigured) {
             console.warn('⚠️ Supabase no está configurado. Usa variables de entorno: VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY');
+        } else {
+            console.log('✅ Supabase cliente inicializado correctamente');
         }
     }
 
@@ -230,7 +232,12 @@ class SupabaseClient {
 }
 
 // Inicializar cliente Supabase
-const supabaseUrl = import.meta?.env?.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = import.meta?.env?.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
+// Lee de la configuración global inyectada en HTML
+const supabaseUrl = (window.SUPABASE_CONFIG?.url) || 'https://placeholder.supabase.co';
+const supabaseAnonKey = (window.SUPABASE_CONFIG?.anonKey) || 'placeholder-key';
+
+console.log('🔧 Configuración de Supabase:');
+console.log('  URL:', supabaseUrl === 'https://placeholder.supabase.co' ? '❌ No configurada' : '✅ ' + supabaseUrl.substring(0, 20) + '...');
+console.log('  Key:', supabaseAnonKey === 'placeholder-key' ? '❌ No configurada' : '✅ ' + supabaseAnonKey.substring(0, 20) + '...');
 
 const supabase = new SupabaseClient(supabaseUrl, supabaseAnonKey);

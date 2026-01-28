@@ -12,6 +12,27 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- Inyectar variables de entorno en global -->
+    <script>
+        // Configuración de Supabase (se reemplaza en build)
+        window.SUPABASE_CONFIG = {
+            url: 'https://placeholder.supabase.co',
+            anonKey: 'placeholder-key'
+        };
+        
+        // Si las variables están disponibles, úsalas
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            // En producción, Vercel inyecta las variables
+            // Intentamos leerlas del global
+            if (typeof VITE_SUPABASE_URL !== 'undefined') {
+                window.SUPABASE_CONFIG.url = VITE_SUPABASE_URL;
+            }
+            if (typeof VITE_SUPABASE_ANON_KEY !== 'undefined') {
+                window.SUPABASE_CONFIG.anonKey = VITE_SUPABASE_ANON_KEY;
+            }
+        }
+    </script>
+    
     <!-- Supabase Client -->
     <script src="utils/supabase-client.js"></script>
 </head>
