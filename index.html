@@ -594,67 +594,68 @@
                 try {
                     console.log('🔄 Iniciando sesión para:', email);
                     
-                    // Verificar que Supabase está configurado
-                    if (!window.supabase.isConfigured) {
-                        console.error('❌ Supabase no está configurado');
-                        window.showNotification('⚠️ Supabase no está configurado. Configura variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY', 'error');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = originalText;
-                        return;
-                    }
+                    let loginSuccess = false;
                     
-                    console.log('✅ Supabase está configurado');
-                    
-                    // Intentar iniciar sesión en Supabase Auth
-                    console.log('📝 Iniciando sesión en Supabase Auth...');
-                    const authResult = await window.supabase.signIn(email, password);
-                    
-                    if (!authResult.success) {
-                        console.error('❌ Error en Supabase Auth:', authResult.error);
-                        window.showNotification(authResult.error || 'Error al iniciar sesión', 'error');
+                    // Intentar con Supabase primero si está configurado
+                    if (window.supabase && window.supabase.isConfigured) {
+                        console.log('📝 Iniciando sesión en Supabase Auth...');
+                        const authResult = await window.supabase.signIn(email, password);
                         
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = originalText;
-                        return;
-                    }
+                        if (authResult.success) {
+                            const user = authResult.user;
+                            console.log('✅ Sesión iniciada con usuario:', user.id);
 
-                    const user = authResult.user;
-                    console.log('✅ Sesión iniciada con usuario:', user.id);
+                            // Obtener datos del usuario desde tabla users
+                            console.log('📥 Obteniendo datos del usuario...');
+                            const userResult = await window.supabase.get('users', { id: 'eq.' + user.id });
+                            
+                            if (userResult.success && userResult.data && userResult.data.length > 0) {
+                                const userData = userResult.data[0];
+                                console.log('✅ Datos del usuario obtenidos');
 
-                    // Obtener datos del usuario desde tabla users
-                    console.log('📥 Obteniendo datos del usuario...');
-                    const userResult = await window.supabase.get('users', { id: 'eq.' + user.id });
-                    
-                    if (!userResult.success || !userResult.data || userResult.data.length === 0) {
-                        console.error('❌ No se encontró perfil de usuario en tabla users');
-                        window.showNotification('Usuario autenticado pero perfil no encontrado. Contacta soporte.', 'error');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = originalText;
-                        return;
-                    }
-
-                    const userData = userResult.data[0];
-                    console.log('✅ Datos del usuario obtenidos');
-
-                    // Guardar en localStorage
-                    window.auth.login({
-                        id: user.id,
-                        name: userData.name,
-                        email: user.email,
-                        role: userData.role,
-                        has_plan: userData.has_plan
-                    });
-                    
-                    console.log('✅ Sesión completada exitosamente');
-                    window.showNotification('¡Sesión iniciada exitosamente!', 'success');
-                    setTimeout(() => {
-                        const currentUser = window.auth.getCurrentUser();
-                        if (currentUser && currentUser.has_plan) {
-                            window.router.navigate('/dashboard');
-                        } else {
-                            window.router.navigate('/onboarding');
+                                // Guardar en localStorage
+                                window.auth.login({
+                                    id: user.id,
+                                    name: userData.name,
+                                    email: user.email,
+                                    role: userData.role,
+                                    has_plan: userData.has_plan
+                                });
+                                loginSuccess = true;
+                            } else {
+                                // Usuario en Auth pero no en tabla users - crear registro
+                                console.log('⚠️ Usuario en Auth pero sin perfil. Intentando fallback localStorage...');
+                            }
                         }
-                    }, 1500);
+                    }
+                    
+                    // Si Supabase falló o no está configurado, intentar con localStorage
+                    if (!loginSuccess) {
+                        console.log('📝 Intentando login con localStorage (fallback)...');
+                        const user = window.auth.login(email, password);
+                        if (user) {
+                            console.log('✅ Login exitoso con localStorage');
+                            loginSuccess = true;
+                        }
+                    }
+                    
+                    if (loginSuccess) {
+                        console.log('✅ Sesión completada exitosamente');
+                        window.showNotification('¡Bienvenido!', 'success');
+                        setTimeout(() => {
+                            const currentUser = window.auth.getCurrentUser();
+                            if (currentUser && currentUser.has_plan) {
+                                window.router.navigate('/dashboard');
+                            } else {
+                                window.router.navigate('/onboarding');
+                            }
+                        }, 1500);
+                    } else {
+                        console.error('❌ Email o contraseña incorrectos');
+                        window.showNotification('Email o contraseña incorrectos', 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalText;
+                    }
                 } catch (error) {
                     console.error('❌ Error en inicio de sesión:', error);
                     window.showNotification('Error al iniciar sesión. Intenta nuevamente. Error: ' + error.message, 'error');
@@ -897,52 +898,6 @@
         </div>
     </div>
 </div>
-
-<script>
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    
-    if (!email || !password) {
-        window.showNotification('Por favor completa todos los campos', 'error');
-        return;
-    }
-    
-    try {
-        // Intentar login en Supabase primero
-        const supabaseResult = await window.supabase.signIn(email, password);
-        
-        if (supabaseResult.success) {
-            // Login exitoso en Supabase
-            window.showNotification('¡Bienvenido!', 'success');
-            
-            // Guardar también en localStorage para compatibilidad
-            const user = { id: supabaseResult.user.id, email: email };
-            localStorage.setItem('user', JSON.stringify(user));
-            
-            setTimeout(() => {
-                window.router.navigate('/dashboard');
-            }, 500);
-        } else {
-            // Si falla Supabase, intentar con localStorage (fallback)
-            const user = window.auth.login(email, password);
-            if (user) {
-                window.showNotification('¡Bienvenido!', 'success');
-                setTimeout(() => {
-                    window.router.navigate('/dashboard');
-                }, 500);
-            } else {
-                window.showNotification('Email o contraseña incorrectos', 'error');
-            }
-        }
-    } catch (error) {
-        console.error('Error en login:', error);
-        window.showNotification('Error al iniciar sesión', 'error');
-    }
-});
-</script>
         `;
 
         const onboardingContent = `
