@@ -1,243 +1,260 @@
 // Supabase Client Configuration
-class SupabaseClient {
-    constructor(url, anonKey) {
-        this.url = url;
-        this.anonKey = anonKey;
-        this.baseURL = `${url}/rest/v1`;
-        this.authURL = `${url}/auth/v1`;
-        this.isConfigured = this.validateConfig();
-        
-        if (!this.isConfigured) {
-            console.warn('⚠️ Supabase no está configurado. Usa variables de entorno: VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY');
-        } else {
-            console.log('✅ Supabase cliente inicializado correctamente');
-        }
-    }
+// Sin dependencias de módulos ES6, compatible con scripts normales
 
-    validateConfig() {
-        const isValid = this.url && this.url !== 'https://placeholder.supabase.co' && 
-                       this.anonKey && this.anonKey !== 'placeholder-key';
-        return isValid;
-    }
-
-    // Registrar nuevo usuario en Supabase Auth
-    async signUp(email, password) {
-        if (!this.isConfigured) {
-            console.error('❌ Supabase no está configurado');
-            return { success: false, error: 'Supabase no configurado. Configura variables de entorno.' };
-        }
-
-        try {
-            console.log('📝 Registrando usuario:', email);
-            const response = await fetch(`${this.authURL}/signup`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': this.anonKey,
-                },
-                body: JSON.stringify({
-                    email,
-                    password,
-                    data: {}
-                })
-            });
-
-            const data = await response.json();
-            console.log('📥 Respuesta de signup:', { status: response.status, data });
+(function() {
+    'use strict';
+    
+    class SupabaseClient {
+        constructor(url, anonKey) {
+            this.url = url;
+            this.anonKey = anonKey;
+            this.baseURL = `${url}/rest/v1`;
+            this.authURL = `${url}/auth/v1`;
+            this.isConfigured = this.validateConfig();
             
-            if (response.ok) {
-                console.log('✅ Usuario registrado en Auth:', data.user.id);
-                return { success: true, user: data.user };
+            if (!this.isConfigured) {
+                console.warn('⚠️ Supabase no está configurado. Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en Vercel');
             } else {
-                console.error('❌ Error en signup:', data);
-                return { success: false, error: data.message || 'Error en registro' };
+                console.log('✅ Supabase cliente inicializado correctamente');
             }
-        } catch (error) {
-            console.error('❌ Error en signUp:', error);
-            return { success: false, error: error.message };
         }
-    }
 
-    // Login en Supabase Auth
-    async signIn(email, password) {
-        try {
-            const response = await fetch(`${this.authURL}/token?grant_type=password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': this.anonKey,
-                },
-                body: JSON.stringify({ email, password })
-            });
+        validateConfig() {
+            const isValid = this.url && this.url !== 'https://placeholder.supabase.co' && 
+                           this.anonKey && this.anonKey !== 'placeholder-key';
+            return isValid;
+        }
 
-            const data = await response.json();
+        // Registrar nuevo usuario en Supabase Auth
+        async signUp(email, password) {
+            if (!this.isConfigured) {
+                console.error('❌ Supabase no está configurado');
+                return { success: false, error: 'Supabase no configurado. Configura variables de entorno.' };
+            }
+
+            try {
+                console.log('📝 Registrando usuario:', email);
+                const response = await fetch(`${this.authURL}/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': this.anonKey,
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        data: {}
+                    })
+                });
+
+                const data = await response.json();
+                console.log('📥 Respuesta de signup:', { status: response.status, data });
+                
+                if (response.ok) {
+                    console.log('✅ Usuario registrado en Auth:', data.user.id);
+                    return { success: true, user: data.user };
+                } else {
+                    console.error('❌ Error en signup:', data);
+                    return { success: false, error: data.message || 'Error en registro' };
+                }
+            } catch (error) {
+                console.error('❌ Error en signUp:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Login en Supabase Auth
+        async signIn(email, password) {
+            if (!this.isConfigured) {
+                console.error('❌ Supabase no está configurado para login');
+                return { success: false, error: 'Supabase no configurado' };
+            }
+
+            try {
+                console.log('🔐 Login para:', email);
+                const response = await fetch(`${this.authURL}/token?grant_type=password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': this.anonKey,
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('supabase_token', data.access_token);
+                    localStorage.setItem('supabase_user', JSON.stringify(data.user));
+                    console.log('✅ Login exitoso');
+                    return { success: true, user: data.user, token: data.access_token };
+                } else {
+                    console.error('❌ Error en login:', data);
+                    return { success: false, error: data.error_description || 'Error en login' };
+                }
+            } catch (error) {
+                console.error('❌ Error en signIn:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Logout
+        logout() {
+            localStorage.removeItem('supabase_token');
+            localStorage.removeItem('supabase_user');
+            console.log('🚪 Logout completado');
+        }
+
+        // Obtener usuario actual
+        getCurrentUser() {
+            const user = localStorage.getItem('supabase_user');
+            return user ? JSON.parse(user) : null;
+        }
+
+        // Obtener token actual
+        getToken() {
+            return localStorage.getItem('supabase_token');
+        }
+
+        // GET request a API REST
+        async get(table, options = {}) {
+            const token = this.getToken();
+            const url = new URL(`${this.baseURL}/${table}`);
             
-            if (response.ok) {
-                // Guardar token
-                localStorage.setItem('supabase_token', data.access_token);
-                localStorage.setItem('supabase_user', JSON.stringify(data.user));
-                return { success: true, user: data.user, token: data.access_token };
-            } else {
-                return { success: false, error: data.error_description || 'Error en login' };
-            }
-        } catch (error) {
-            console.error('Error en signIn:', error);
-            return { success: false, error: error.message };
-        }
-    }
+            if (options.select) url.searchParams.append('select', options.select);
+            if (options.where) Object.entries(options.where).forEach(([key, value]) => {
+                url.searchParams.append(`${key}=eq.${value}`);
+            });
 
-    // Logout
-    logout() {
-        localStorage.removeItem('supabase_token');
-        localStorage.removeItem('supabase_user');
-    }
+            try {
+                const response = await fetch(url.toString(), {
+                    method: 'GET',
+                    headers: {
+                        'apikey': this.anonKey,
+                        'Authorization': token ? `Bearer ${token}` : '',
+                        'Content-Type': 'application/json'
+                    }
+                });
 
-    // Obtener usuario actual
-    getCurrentUser() {
-        const user = localStorage.getItem('supabase_user');
-        return user ? JSON.parse(user) : null;
-    }
-
-    // Obtener token actual
-    getToken() {
-        return localStorage.getItem('supabase_token');
-    }
-
-    // GET request a API REST
-    async get(table, options = {}) {
-        const token = this.getToken();
-        const url = new URL(`${this.baseURL}/${table}`);
-        
-        if (options.select) url.searchParams.append('select', options.select);
-        if (options.where) Object.entries(options.where).forEach(([key, value]) => {
-            url.searchParams.append(`${key}=eq.${value}`);
-        });
-
-        try {
-            const response = await fetch(url.toString(), {
-                method: 'GET',
-                headers: {
-                    'apikey': this.anonKey,
-                    'Authorization': token ? `Bearer ${token}` : '',
-                    'Content-Type': 'application/json'
+                if (response.ok) {
+                    return { success: true, data: await response.json() };
+                } else {
+                    return { success: false, error: 'Error en GET' };
                 }
-            });
-
-            if (response.ok) {
-                return { success: true, data: await response.json() };
-            } else {
-                return { success: false, error: 'Error en GET' };
+            } catch (error) {
+                console.error('Error en GET:', error);
+                return { success: false, error: error.message };
             }
-        } catch (error) {
-            console.error('Error en GET:', error);
-            return { success: false, error: error.message };
-        }
-    }
-
-    // POST request a API REST
-    async post(table, data) {
-        if (!this.isConfigured) {
-            console.error('❌ Supabase no está configurado para POST');
-            return { success: false, error: 'Supabase no configurado' };
         }
 
-        const token = this.getToken();
+        // POST request a API REST
+        async post(table, data) {
+            if (!this.isConfigured) {
+                console.error('❌ Supabase no está configurado para POST');
+                return { success: false, error: 'Supabase no configurado' };
+            }
 
-        try {
-            console.log(`📤 POST a ${table}:`, data);
-            const response = await fetch(`${this.baseURL}/${table}`, {
-                method: 'POST',
-                headers: {
-                    'apikey': this.anonKey,
-                    'Authorization': token ? `Bearer ${token}` : '',
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify(data)
-            });
+            const token = this.getToken();
 
-            console.log(`📥 Respuesta POST (${table}): status=${response.status}`);
-            
-            if (response.ok) {
-                const responseData = await response.json();
-                console.log(`✅ POST exitoso en ${table}:`, responseData);
-                return { success: true, data: responseData };
-            } else {
-                let errorMsg = 'Error en POST';
-                try {
-                    const error = await response.json();
-                    errorMsg = error.message || error.error || JSON.stringify(error);
-                } catch (e) {
-                    errorMsg = await response.text();
+            try {
+                console.log(`📤 POST a ${table}:`, data);
+                const response = await fetch(`${this.baseURL}/${table}`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': this.anonKey,
+                        'Authorization': token ? `Bearer ${token}` : '',
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                console.log(`📥 Respuesta POST (${table}): status=${response.status}`);
+                
+                if (response.ok) {
+                    const responseData = await response.json();
+                    console.log(`✅ POST exitoso en ${table}:`, responseData);
+                    return { success: true, data: responseData };
+                } else {
+                    let errorMsg = 'Error en POST';
+                    try {
+                        const error = await response.json();
+                        errorMsg = error.message || error.error || JSON.stringify(error);
+                    } catch (e) {
+                        errorMsg = await response.text();
+                    }
+                    console.error(`❌ Error en POST (${table}):`, { status: response.status, error: errorMsg });
+                    return { success: false, error: errorMsg };
                 }
-                console.error(`❌ Error en POST (${table}):`, { status: response.status, error: errorMsg });
-                return { success: false, error: errorMsg };
+            } catch (error) {
+                console.error(`❌ Error en POST (${table}):`, error);
+                return { success: false, error: error.message };
             }
-        } catch (error) {
-            console.error(`❌ Error en POST (${table}):`, error);
-            return { success: false, error: error.message };
         }
-    }
 
-    // UPDATE request a API REST
-    async update(table, id, data) {
-        const token = this.getToken();
+        // UPDATE request a API REST
+        async update(table, id, data) {
+            const token = this.getToken();
 
-        try {
-            const response = await fetch(`${this.baseURL}/${table}?id=eq.${id}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': this.anonKey,
-                    'Authorization': token ? `Bearer ${token}` : '',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
+            try {
+                const response = await fetch(`${this.baseURL}/${table}?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': this.anonKey,
+                        'Authorization': token ? `Bearer ${token}` : '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
 
-            if (response.ok) {
-                return { success: true, data: await response.json() };
-            } else {
-                return { success: false, error: 'Error en UPDATE' };
-            }
-        } catch (error) {
-            console.error('Error en UPDATE:', error);
-            return { success: false, error: error.message };
-        }
-    }
-
-    // DELETE request a API REST
-    async delete(table, id) {
-        const token = this.getToken();
-
-        try {
-            const response = await fetch(`${this.baseURL}/${table}?id=eq.${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'apikey': this.anonKey,
-                    'Authorization': token ? `Bearer ${token}` : '',
-                    'Content-Type': 'application/json'
+                if (response.ok) {
+                    return { success: true, data: await response.json() };
+                } else {
+                    return { success: false, error: 'Error en UPDATE' };
                 }
-            });
-
-            if (response.ok) {
-                return { success: true };
-            } else {
-                return { success: false, error: 'Error en DELETE' };
+            } catch (error) {
+                console.error('Error en UPDATE:', error);
+                return { success: false, error: error.message };
             }
-        } catch (error) {
-            console.error('Error en DELETE:', error);
-            return { success: false, error: error.message };
+        }
+
+        // DELETE request a API REST
+        async delete(table, id) {
+            const token = this.getToken();
+
+            try {
+                const response = await fetch(`${this.baseURL}/${table}?id=eq.${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': this.anonKey,
+                        'Authorization': token ? `Bearer ${token}` : '',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    return { success: true };
+                } else {
+                    return { success: false, error: 'Error en DELETE' };
+                }
+            } catch (error) {
+                console.error('Error en DELETE:', error);
+                return { success: false, error: error.message };
+            }
         }
     }
-}
 
 // Inicializar cliente Supabase
-// Lee de la configuración global inyectada en HTML
-const supabaseUrl = (window.SUPABASE_CONFIG?.url) || 'https://placeholder.supabase.co';
-const supabaseAnonKey = (window.SUPABASE_CONFIG?.anonKey) || 'placeholder-key';
+    // Lee de la configuración global inyectada en HTML
+    const supabaseUrl = (window.SUPABASE_CONFIG?.url) || 'https://placeholder.supabase.co';
+    const supabaseAnonKey = (window.SUPABASE_CONFIG?.anonKey) || 'placeholder-key';
 
-console.log('🔧 Configuración de Supabase:');
-console.log('  URL:', supabaseUrl === 'https://placeholder.supabase.co' ? '❌ No configurada' : '✅ ' + supabaseUrl.substring(0, 20) + '...');
-console.log('  Key:', supabaseAnonKey === 'placeholder-key' ? '❌ No configurada' : '✅ ' + supabaseAnonKey.substring(0, 20) + '...');
+    console.log('🔧 Configuración de Supabase:');
+    console.log('  URL:', supabaseUrl === 'https://placeholder.supabase.co' ? '❌ No configurada' : '✅ ' + supabaseUrl.substring(0, 20) + '...');
+    console.log('  Key:', supabaseAnonKey === 'placeholder-key' ? '❌ No configurada' : '✅ ' + supabaseAnonKey.substring(0, 20) + '...');
 
-const supabase = new SupabaseClient(supabaseUrl, supabaseAnonKey);
+    // IMPORTANTE: Hacer supabase disponible globalmente
+    window.supabase = new SupabaseClient(supabaseUrl, supabaseAnonKey);
+
+    console.log('✅ Supabase cliente cargado globalmente como window.supabase');
+})(); // Fin de IIFE
