@@ -5,11 +5,28 @@ class SupabaseClient {
         this.anonKey = anonKey;
         this.baseURL = `${url}/rest/v1`;
         this.authURL = `${url}/auth/v1`;
+        this.isConfigured = this.validateConfig();
+        
+        if (!this.isConfigured) {
+            console.warn('⚠️ Supabase no está configurado. Usa variables de entorno: VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY');
+        }
+    }
+
+    validateConfig() {
+        const isValid = this.url && this.url !== 'https://placeholder.supabase.co' && 
+                       this.anonKey && this.anonKey !== 'placeholder-key';
+        return isValid;
     }
 
     // Registrar nuevo usuario en Supabase Auth
     async signUp(email, password) {
+        if (!this.isConfigured) {
+            console.error('❌ Supabase no está configurado');
+            return { success: false, error: 'Supabase no configurado. Configura variables de entorno.' };
+        }
+
         try {
+            console.log('📝 Registrando usuario:', email);
             const response = await fetch(`${this.authURL}/signup`, {
                 method: 'POST',
                 headers: {
@@ -24,14 +41,17 @@ class SupabaseClient {
             });
 
             const data = await response.json();
+            console.log('📥 Respuesta de signup:', { status: response.status, data });
             
             if (response.ok) {
+                console.log('✅ Usuario registrado en Auth:', data.user.id);
                 return { success: true, user: data.user };
             } else {
+                console.error('❌ Error en signup:', data);
                 return { success: false, error: data.message || 'Error en registro' };
             }
         } catch (error) {
-            console.error('Error en signUp:', error);
+            console.error('❌ Error en signUp:', error);
             return { success: false, error: error.message };
         }
     }
@@ -114,27 +134,45 @@ class SupabaseClient {
 
     // POST request a API REST
     async post(table, data) {
+        if (!this.isConfigured) {
+            console.error('❌ Supabase no está configurado para POST');
+            return { success: false, error: 'Supabase no configurado' };
+        }
+
         const token = this.getToken();
 
         try {
+            console.log(`📤 POST a ${table}:`, data);
             const response = await fetch(`${this.baseURL}/${table}`, {
                 method: 'POST',
                 headers: {
                     'apikey': this.anonKey,
                     'Authorization': token ? `Bearer ${token}` : '',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
                 },
                 body: JSON.stringify(data)
             });
 
+            console.log(`📥 Respuesta POST (${table}): status=${response.status}`);
+            
             if (response.ok) {
-                return { success: true, data: await response.json() };
+                const responseData = await response.json();
+                console.log(`✅ POST exitoso en ${table}:`, responseData);
+                return { success: true, data: responseData };
             } else {
-                const error = await response.json();
-                return { success: false, error: error.message || 'Error en POST' };
+                let errorMsg = 'Error en POST';
+                try {
+                    const error = await response.json();
+                    errorMsg = error.message || error.error || JSON.stringify(error);
+                } catch (e) {
+                    errorMsg = await response.text();
+                }
+                console.error(`❌ Error en POST (${table}):`, { status: response.status, error: errorMsg });
+                return { success: false, error: errorMsg };
             }
         } catch (error) {
-            console.error('Error en POST:', error);
+            console.error(`❌ Error en POST (${table}):`, error);
             return { success: false, error: error.message };
         }
     }

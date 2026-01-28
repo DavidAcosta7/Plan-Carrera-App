@@ -551,17 +551,32 @@ document.getElementById('registerForm').addEventListener('submit', async functio
     }
 
     try {
+        console.log('🔄 Iniciando registro para:', email);
+        
+        // Verificar que Supabase está configurado
+        if (!supabase.isConfigured) {
+            console.error('❌ Supabase no está configurado');
+            showNotification('⚠️ Supabase no está configurado. Configura variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY', 'error');
+            return;
+        }
+        
+        console.log('✅ Supabase está configurado');
+        
         // Primero registrar en Supabase Auth
+        console.log('📝 Registrando en Supabase Auth...');
         const authResult = await supabase.signUp(email, password);
         
         if (!authResult.success) {
+            console.error('❌ Error en Supabase Auth:', authResult.error);
             showNotification(authResult.error || 'Error al registrar', 'error');
             return;
         }
 
         const userId = authResult.user.id;
+        console.log('✅ Usuario creado en Auth con ID:', userId);
 
         // Luego crear el registro en tabla users
+        console.log('📤 Insertando en tabla users...');
         const userResult = await supabase.post('users', {
             id: userId,
             email: email,
@@ -574,20 +589,24 @@ document.getElementById('registerForm').addEventListener('submit', async functio
         });
 
         if (!userResult.success) {
-            showNotification('Cuenta registrada pero error en tabla users. Contacta soporte.', 'error');
+            console.error('❌ Error al insertar en tabla users:', userResult.error);
+            showNotification('Cuenta registrada en Auth pero error al guardar perfil. Error: ' + userResult.error, 'error');
             return;
         }
+
+        console.log('✅ Usuario insertado en tabla users');
 
         // Guardar usuario en localStorage también (para modo offline)
         auth.register({ name, email, password });
         
+        console.log('✅ Registro completado exitosamente');
         showNotification('¡Cuenta creada exitosamente!', 'success');
         setTimeout(() => {
             router.navigate('/onboarding');
         }, 1500);
     } catch (error) {
-        console.error('Error en registro:', error);
-        showNotification('Error al crear la cuenta. Intenta nuevamente.', 'error');
+        console.error('❌ Error en registro:', error);
+        showNotification('Error al crear la cuenta. Intenta nuevamente. Error: ' + error.message, 'error');
     }
 });
 </scr` + `ipt>
