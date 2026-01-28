@@ -522,6 +522,18 @@
                                 submitBtn.disabled = false;
                                 submitBtn.textContent = originalText;
                             }, authResult.retryAfter * 1000);
+                        } else if (authResult.error && authResult.error.includes('ya está registrado')) {
+                            // Usuario ya existe
+                            window.showNotification('Este email ya está registrado. Por favor inicia sesión.', 'error', 6000);
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = originalText;
+                            // Mostrar opción de ir a login
+                            setTimeout(() => {
+                                const goLogin = confirm('¿Deseas ir a la página de inicio de sesión?');
+                                if (goLogin) {
+                                    window.router.navigate('/login');
+                                }
+                            }, 1000);
                         } else if (authResult.error && authResult.error.includes('email')) {
                             window.showNotification('⚠️ Problema con el email. Verifica que sea un email válido.', 'error', 6000);
                             submitBtn.disabled = false;

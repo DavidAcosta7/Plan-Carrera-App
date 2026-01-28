@@ -69,6 +69,12 @@
                         return { success: false, error: errorMsg, retryAfter: 300 }; // 5 minutos
                     }
                     
+                    // Manejo especial para usuario ya existe
+                    if (data.error_code === 'user_already_exists') {
+                        const errorMsg = 'Este email ya está registrado. Por favor, inicia sesión o usa otro email.';
+                        return { success: false, error: errorMsg };
+                    }
+                    
                     const errorMsg = data.message || data.error || data.error_description || data.msg || 'Error en registro';
                     return { success: false, error: errorMsg };
                 }
