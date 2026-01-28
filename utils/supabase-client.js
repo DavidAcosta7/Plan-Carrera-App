@@ -65,18 +65,35 @@
                     return { success: false, error: errorMsg };
                 }
                 
-                if (!data || !data.user) {
-                    console.error('❌ Error: respuesta OK (200) pero sin user en data', data);
-                    return { success: false, error: 'Usuario creado pero sin respuesta esperada. Por favor intenta iniciar sesión.' };
+                // CASO 1: Respuesta con user (confirmación de email deshabilitada)
+                if (data && data.user && data.user.id) {
+                    console.log('✅ Usuario registrado en Auth (sin confirmación requerida):', data.user.id);
+                    return { success: true, user: data.user };
                 }
                 
-                if (!data.user.id) {
-                    console.error('❌ Error: user existe pero sin id', data.user);
-                    return { success: false, error: 'Usuario creado pero sin ID. Contacta soporte.' };
+                // CASO 2: Respuesta sin user pero con identificador (confirmación de email habilitada)
+                // En este caso creamos un usuario temporal con email para poder continuar
+                if (data && data.email) {
+                    console.log('✅ Usuario registrado (confirmación de email requerida):', data.email);
+                    // Retornar usuario temporal basado en email
+                    return { 
+                        success: true, 
+                        user: { 
+                            id: 'temp-' + Math.random().toString(36).substring(7),
+                            email: data.email,
+                            email_confirmed_at: null
+                        },
+                        needsEmailConfirmation: true
+                    };
                 }
                 
-                console.log('✅ Usuario registrado en Auth:', data.user.id);
-                return { success: true, user: data.user };
+                // CASO 3: Respuesta OK pero sin usuario ni email - error desconocido
+                console.error('❌ Error: respuesta OK (200) pero sin user ni email en data', data);
+                return { 
+                    success: false, 
+                    error: 'Registro parcialmente exitoso pero sin información de usuario. Por favor intenta iniciar sesión.',
+                    data: data
+                };
                 
             } catch (error) {
                 console.error('❌ Error en signUp:', error);

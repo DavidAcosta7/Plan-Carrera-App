@@ -507,7 +507,7 @@
                         console.error('❌ Error en Supabase Auth:', authResult.error);
                         
                         // Mensaje especial para rate limiting
-                        if (authResult.error.includes('10 seconds')) {
+                        if (authResult.error && authResult.error.includes('10 seconds')) {
                             window.showNotification('⏳ Espera 10 segundos antes de intentar nuevamente', 'error', 6000);
                         } else {
                             window.showNotification(authResult.error || 'Error al registrar', 'error');
@@ -520,8 +520,18 @@
 
                     const userId = authResult.user.id;
                     console.log('✅ Usuario creado en Auth con ID:', userId);
+                    
+                    // Verificar si requiere confirmación de email
+                    if (authResult.needsEmailConfirmation) {
+                        console.log('📧 Se envió confirmación de email. El usuario necesita verificar su email.');
+                        window.showNotification('¡Cuenta registrada! Por favor verifica tu email para confirmar tu cuenta.', 'success', 5000);
+                        setTimeout(() => {
+                            window.router.navigate('/login');
+                        }, 5000);
+                        return;
+                    }
 
-                    // Luego crear el registro en tabla users
+                    // Luego crear el registro en tabla users (solo si no requiere confirmación)
                     console.log('📤 Insertando en tabla users...');
                     const userResult = await window.supabase.post('users', {
                         id: userId,
