@@ -14,23 +14,13 @@
     
     <!-- Inyectar variables de entorno en global -->
     <script>
-        // Configuración de Supabase (se reemplaza en build)
+        // Configuración de Supabase
         window.SUPABASE_CONFIG = {
-            url: 'https://placeholder.supabase.co',
-            anonKey: 'placeholder-key'
+            url: 'https://illzdmhlkhnooykecqkv.supabase.co',
+            anonKey: 'sb_publishable_VeO6VB6HFb75x0Nk5_6roQ_Wbt_oxPI'
         };
         
-        // Si las variables están disponibles, úsalas
-        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            // En producción, Vercel inyecta las variables
-            // Intentamos leerlas del global
-            if (typeof VITE_SUPABASE_URL !== 'undefined') {
-                window.SUPABASE_CONFIG.url = VITE_SUPABASE_URL;
-            }
-            if (typeof VITE_SUPABASE_ANON_KEY !== 'undefined') {
-                window.SUPABASE_CONFIG.anonKey = VITE_SUPABASE_ANON_KEY;
-            }
-        }
+        console.log('📝 Variables de Supabase inyectadas en window.SUPABASE_CONFIG');
     </script>
     
     <!-- Supabase Client -->
