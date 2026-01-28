@@ -105,17 +105,6 @@
                     }
                     this.container.innerHTML = content;
                     this.executeScripts();
-                    
-                    // Inicializar handlers después de renderizar
-                    if (window.initRegisterForm && document.getElementById('registerForm')) {
-                        window.initRegisterForm();
-                    }
-                    if (window.initLoginForm && document.getElementById('loginForm')) {
-                        window.initLoginForm();
-                    }
-                    if (window.initDashboardForm && document.getElementById('phasesContainer')) {
-                        window.initDashboardForm();
-                    }
                 } catch (error) {
                     console.error('Error rendering route:', error);
                     this.container.innerHTML = '<div class="error">Error cargando la página</div>';
@@ -392,169 +381,56 @@
             if (el) el.scrollIntoView({ behavior: 'smooth' });
         };
 
-        // Inicializar handlers de formularios cuando se rendericen
-        window.initRegisterForm = function() {
-            const form = document.getElementById('registerForm');
-            if (!form) return;
+        window.generatePlan = async function() {
+            const responses = {
+                level: document.getElementById('level').value,
+                interests: document.getElementById('interests').value,
+                time: document.getElementById('time').value
+            };
 
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const submitBtn = document.getElementById('submitBtn');
-                
-                // Evitar múltiples submits
-                if (submitBtn.disabled) {
-                    console.log('⏳ El formulario ya está siendo procesado...');
-                    return;
-                }
-                
-                submitBtn.disabled = true;
-                const originalText = submitBtn.textContent;
-                submitBtn.textContent = '⏳ Registrando...';
-                
-                const formData = new FormData(form);
-                const name = formData.get('name');
-                const email = formData.get('email');
-                const password = formData.get('password');
-                const confirmPassword = formData.get('confirmPassword');
-
-                if (password !== confirmPassword) {
-                    window.showNotification('Las contraseñas no coinciden', 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = originalText;
-                    return;
-                }
-
-                if (!name || !email || !password) {
-                    window.showNotification('Por favor completa todos los campos', 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = originalText;
-                    return;
-                }
-
-                try {
-                    console.log('🔄 Iniciando registro para:', email);
-                    
-                    // Verificar que Supabase está configurado
-                    if (!window.supabase.isConfigured) {
-                        console.error('❌ Supabase no está configurado');
-                        window.showNotification('⚠️ Supabase no está configurado. Configura variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY', 'error');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = originalText;
-                        return;
-                    }
-                    
-                    console.log('✅ Supabase está configurado');
-                    
-                    // Primero registrar en Supabase Auth
-                    console.log('📝 Registrando en Supabase Auth...');
-                    const authResult = await window.supabase.signUp(email, password);
-                    
-                    if (!authResult.success) {
-                        console.error('❌ Error en Supabase Auth:', authResult.error);
-                        
-                        // Mensaje especial para rate limiting
-                        if (authResult.error.includes('10 seconds')) {
-                            window.showNotification('⏳ Espera 10 segundos antes de intentar nuevamente', 'error', 6000);
-                        } else {
-                            window.showNotification(authResult.error || 'Error al registrar', 'error');
-                        }
-                        
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = originalText;
-                        return;
-                    }
-
-                    const userId = authResult.user.id;
-                    console.log('✅ Usuario creado en Auth con ID:', userId);
-
-                    // Luego crear el registro en tabla users
-                    console.log('📤 Insertando en tabla users...');
-                    const userResult = await window.supabase.post('users', {
-                        id: userId,
-                        email: email,
-                        name: name,
-                        password_hash: 'managed_by_supabase_auth',
-                        role: 'user',
-                        has_plan: false,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    });
-
-                    if (!userResult.success) {
-                        console.error('❌ Error al insertar en tabla users:', userResult.error);
-                        window.showNotification('Cuenta registrada en Auth pero error al guardar perfil. Error: ' + userResult.error, 'error');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = originalText;
-                        return;
-                    }
-
-                    console.log('✅ Usuario insertado en tabla users');
-
-                    // Guardar usuario en localStorage también (para modo offline)
-                    window.auth.register({ name, email, password });
-                    
-                    console.log('✅ Registro completado exitosamente');
-                    window.showNotification('¡Cuenta creada exitosamente!', 'success');
-                    setTimeout(() => {
-                        window.router.navigate('/onboarding');
-                    }, 1500);
-                } catch (error) {
-                    console.error('❌ Error en registro:', error);
-                    window.showNotification('Error al crear la cuenta. Intenta nuevamente. Error: ' + error.message, 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = originalText;
-                }
-            });
+            try {
+                const plan = await window.claudeAPI.generatePlan(responses);
+                window.auth.updatePlan(plan);
+                window.showNotification('¡Plan generado exitosamente!', 'success');
+                setTimeout(() => {
+                    window.router.navigate('/dashboard');
+                }, 1500);
+            } catch (error) {
+                window.showNotification('Error generando el plan', 'error');
+            }
         };
 
-        window.initLoginForm = function() {
-            const form = document.getElementById('loginForm');
-            if (!form) return;
+        window.initDashboard = function() {
+            if (!window.auth) {
+                console.error('❌ auth no está definido');
+                return;
+            }
+            
+            const user = window.auth.getUser();
+            if (!user || !user.plan) return;
 
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const email = document.getElementById('loginEmail').value;
-                const password = document.getElementById('loginPassword').value;
-                
-                if (!email || !password) {
-                    window.showNotification('Por favor completa todos los campos', 'error');
-                    return;
-                }
-                
-                try {
-                    // Intentar login en Supabase primero
-                    const supabaseResult = await window.supabase.signIn(email, password);
-                    
-                    if (supabaseResult.success) {
-                        // Login exitoso en Supabase
-                        window.showNotification('¡Bienvenido!', 'success');
-                        
-                        // Guardar también en localStorage para compatibilidad
-                        const user = { id: supabaseResult.user.id, email: email };
-                        localStorage.setItem('user', JSON.stringify(user));
-                        
-                        setTimeout(() => {
-                            window.router.navigate('/dashboard');
-                        }, 500);
-                    } else {
-                        // Si falla Supabase, intentar con localStorage (fallback)
-                        const user = window.auth.login(email, password);
-                        if (user) {
-                            window.showNotification('¡Bienvenido!', 'success');
-                            setTimeout(() => {
-                                window.router.navigate('/dashboard');
-                            }, 500);
-                        } else {
-                            window.showNotification('Email o contraseña incorrectos', 'error');
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error en login:', error);
-                    window.showNotification('Error al iniciar sesión', 'error');
-                }
-            });
+            const userNameEl = document.getElementById('userName');
+            if (userNameEl) userNameEl.textContent = user.name;
+            
+            const container = document.getElementById('phasesContainer');
+            if (container && user.plan.phases) {
+                container.innerHTML = user.plan.phases.map(function(phase) {
+                    return '<div class="phase-card">' +
+                        '<h3>' + phase.title + '</h3>' +
+                        '<p>' + phase.duration + '</p>' +
+                        '<div class="phase-items">' +
+                            phase.items.map(function(item) {
+                                return '<li>' + item + '</li>';
+                            }).join('') +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+            }
+        };
+
+        window.logout = function() {
+            window.auth.logout();
+            window.router.navigate('/');
         };
 
         // Contenido de las páginas (inline para evitar CORS)
@@ -716,6 +592,118 @@
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Evitar múltiples submits
+    if (submitBtn.disabled) {
+        console.log('⏳ El formulario ya está siendo procesado...');
+        return;
+    }
+    
+    submitBtn.disabled = true;
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '⏳ Registrando...';
+    
+    const formData = new FormData(this);
+    const name = formData.get('name');
+    const email = formData.get('email');
+    const password = formData.get('password');
+    const confirmPassword = formData.get('confirmPassword');
+
+    if (password !== confirmPassword) {
+        showNotification('Las contraseñas no coinciden', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        return;
+    }
+
+    if (!name || !email || !password) {
+        showNotification('Por favor completa todos los campos', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        return;
+    }
+
+    try {
+        console.log('🔄 Iniciando registro para:', email);
+        
+        // Verificar que Supabase está configurado
+        if (!window.supabase.isConfigured) {
+            console.error('❌ Supabase no está configurado');
+            window.showNotification('⚠️ Supabase no está configurado. Configura variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+        
+        console.log('✅ Supabase está configurado');
+        
+        // Primero registrar en Supabase Auth
+        console.log('📝 Registrando en Supabase Auth...');
+        const authResult = await window.supabase.signUp(email, password);
+        
+        if (!authResult.success) {
+            console.error('❌ Error en Supabase Auth:', authResult.error);
+            
+            // Mensaje especial para rate limiting
+            if (authResult.error.includes('10 seconds')) {
+                window.showNotification('⏳ Espera 10 segundos antes de intentar nuevamente', 'error', 6000);
+            } else {
+                window.showNotification(authResult.error || 'Error al registrar', 'error');
+            }
+            
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+
+        const userId = authResult.user.id;
+        console.log('✅ Usuario creado en Auth con ID:', userId);
+
+        // Luego crear el registro en tabla users
+        console.log('📤 Insertando en tabla users...');
+        const userResult = await window.supabase.post('users', {
+            id: userId,
+            email: email,
+            name: name,
+            password_hash: 'managed_by_supabase_auth',
+            role: 'user',
+            has_plan: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        });
+
+        if (!userResult.success) {
+            console.error('❌ Error al insertar en tabla users:', userResult.error);
+            window.showNotification('Cuenta registrada en Auth pero error al guardar perfil. Error: ' + userResult.error, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+
+        console.log('✅ Usuario insertado en tabla users');
+
+        // Guardar usuario en localStorage también (para modo offline)
+        window.auth.register({ name, email, password });
+        
+        console.log('✅ Registro completado exitosamente');
+        window.showNotification('¡Cuenta creada exitosamente!', 'success');
+        setTimeout(() => {
+            window.router.navigate('/onboarding');
+        }, 1500);
+    } catch (error) {
+        console.error('❌ Error en registro:', error);
+        window.showNotification('Error al crear la cuenta. Intenta nuevamente. Error: ' + error.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+</script>
         `;
 
         const loginContent = `
@@ -790,6 +778,52 @@
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+        window.showNotification('Por favor completa todos los campos', 'error');
+        return;
+    }
+    
+    try {
+        // Intentar login en Supabase primero
+        const supabaseResult = await window.supabase.signIn(email, password);
+        
+        if (supabaseResult.success) {
+            // Login exitoso en Supabase
+            window.showNotification('¡Bienvenido!', 'success');
+            
+            // Guardar también en localStorage para compatibilidad
+            const user = { id: supabaseResult.user.id, email: email };
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            setTimeout(() => {
+                window.router.navigate('/dashboard');
+            }, 500);
+        } else {
+            // Si falla Supabase, intentar con localStorage (fallback)
+            const user = window.auth.login(email, password);
+            if (user) {
+                window.showNotification('¡Bienvenido!', 'success');
+                setTimeout(() => {
+                    window.router.navigate('/dashboard');
+                }, 500);
+            } else {
+                window.showNotification('Email o contraseña incorrectos', 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Error en login:', error);
+        window.showNotification('Error al iniciar sesión', 'error');
+    }
+});
+</script>
         `;
 
         const onboardingContent = `
@@ -831,34 +865,13 @@
             </div>
 
             <div class="question-actions">
-                <button class="btn-primary" onclick="generatePlan()">
+                <button class="btn-primary" onclick="window.generatePlan()">
                     Generar Mi Plan
                 </button>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-async function generatePlan() {
-    const responses = {
-        level: document.getElementById('level').value,
-        interests: document.getElementById('interests').value,
-        time: document.getElementById('time').value
-    };
-
-    try {
-        const plan = await window.claudeAPI.generatePlan(responses);
-        window.auth.updatePlan(plan);
-        window.showNotification('¡Plan generado exitosamente!', 'success');
-        setTimeout(() => {
-            window.router.navigate('/dashboard');
-        }, 1500);
-    } catch (error) {
-        window.showNotification('Error generando el plan', 'error');
-    }
-}
-</script>
         `;
 
         const dashboardContent = `
@@ -872,7 +885,7 @@ async function generatePlan() {
             <div class="header-right">
                 <div class="user-info">
                     <span id="userName">Usuario</span>
-                    <button class="btn-secondary" onclick="logout()">Cerrar Sesión</button>
+                    <button class="btn-secondary" onclick="window.logout()">Cerrar Sesión</button>
                 </div>
             </div>
         </div>
@@ -902,43 +915,6 @@ async function generatePlan() {
         </section>
     </main>
 </div>
-
-<script>
-function initDashboard() {
-    // auth está definido globalmente en window.auth
-    if (!window.auth) {
-        console.error('❌ auth no está definido');
-        return;
-    }
-    
-    const user = window.auth.getUser();
-    if (!user || !user.plan) return;
-
-    document.getElementById('userName').textContent = user.name;
-    
-    // Renderizar fases del plan
-    const container = document.getElementById('phasesContainer');
-    container.innerHTML = user.plan.phases.map(function(phase) {
-        return '<div class="phase-card">' +
-            '<h3>' + phase.title + '</h3>' +
-            '<p>' + phase.duration + '</p>' +
-            '<div class="phase-items">' +
-                phase.items.map(function(item) {
-                    return '<li>' + item + '</li>';
-                }).join('') +
-            '</div>' +
-        '</div>';
-    }).join('');
-}
-
-function logout() {
-    window.auth.logout();
-    window.router.navigate('/');
-}
-
-// No ejecutar aquí - se ejecutará cuando se renderice el dashboard
-// initDashboard();
-</script>
         `;
 
         // Definir rutas con contenido inline
