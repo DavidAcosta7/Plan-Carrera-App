@@ -375,6 +375,12 @@
             }, duration);
         };
 
+        // Funciones globales para templates
+        window.scrollToFeatures = function() {
+            const el = document.getElementById('features');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        };
+
         // Contenido de las páginas (inline para evitar CORS)
         const landingContent = `
 <div class="landing-page">
@@ -409,7 +415,7 @@
                 <button class="btn-primary" data-route="/register">
                     Comenzar Gratis
                 </button>
-                <button class="btn-secondary" onclick="scrollToFeatures()">
+                <button class="btn-secondary" onclick="window.scrollToFeatures()">
                     Ver Características
                 </button>
             </div>
@@ -471,12 +477,6 @@
         </div>
     </footer>
 </div>
-
-<script>
-function scrollToFeatures() {
-    document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
-}
-</script>
         `;
 
         const registerContent = `
