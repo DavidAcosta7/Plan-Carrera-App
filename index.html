@@ -361,6 +361,23 @@
         // Contenido de las páginas (inline para evitar CORS)
         const landingContent = `
 <div class="landing-page">
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-logo">
+                <h3>Plan Carrera Pro</h3>
+            </div>
+            <div class="navbar-buttons">
+                <button class="btn-outline" data-route="/login">
+                    Iniciar Sesión
+                </button>
+                <button class="btn-primary" data-route="/register">
+                    Registrarse
+                </button>
+            </div>
+        </div>
+    </nav>
+
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-content">
@@ -536,6 +553,108 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
 </scr` + `ipt>
         `;
 
+        const loginContent = `
+<div class="login-page">
+    <div class="login-container">
+        <div class="login-box">
+            <h1>Iniciar Sesión</h1>
+            <p class="login-subtitle">Bienvenido de vuelta a Plan Carrera Pro</p>
+
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input 
+                        type="email" 
+                        id="loginEmail" 
+                        name="email" 
+                        placeholder="tu@email.com"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="loginPassword">Contraseña</label>
+                    <input 
+                        type="password" 
+                        id="loginPassword" 
+                        name="password" 
+                        placeholder="••••••••"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="btn-primary btn-full">
+                    Iniciar Sesión
+                </button>
+            </form>
+
+            <div class="login-divider">
+                <span>¿No tienes cuenta?</span>
+            </div>
+
+            <button class="btn-secondary btn-full" data-route="/register">
+                Crear cuenta nueva
+            </button>
+
+            <div class="login-footer">
+                <a href="#" onclick="alert('Feature coming soon'); return false;">¿Olvidaste tu contraseña?</a>
+                <span>•</span>
+                <a href="#/" data-route="/">Volver al inicio</a>
+            </div>
+        </div>
+
+        <div class="login-visual">
+            <div class="visual-card">
+                <div class="card-header">
+                    <div class="dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="code-line"></div>
+                    <div class="code-line"></div>
+                    <div class="code-line"></div>
+                </div>
+            </div>
+            <div class="visual-text">
+                <h3>Continúa tu viaje profesional</h3>
+                <p>Accede a tu plan personalizado y sigue aprendiendo con IA.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+        showNotification('Por favor completa todos los campos', 'error');
+        return;
+    }
+    
+    try {
+        const user = auth.login(email, password);
+        if (user) {
+            showNotification('¡Bienvenido!', 'success');
+            setTimeout(() => {
+                router.navigate('/dashboard');
+            }, 500);
+        } else {
+            showNotification('Email o contraseña incorrectos', 'error');
+        }
+    } catch (error) {
+        showNotification('Error al iniciar sesión', 'error');
+    }
+});
+</scr` + `ipt>
+        `;
+
         const onboardingContent = `
 <div class="onboarding-page">
     <div class="onboarding-container">
@@ -680,6 +799,7 @@ initDashboard();
 
         // Definir rutas con contenido inline
         router.addRoute('/', landingContent);
+        router.addRoute('/login', loginContent);
         router.addRoute('/register', registerContent);
         router.addRoute('/onboarding', onboardingContent);
         router.addRoute('/dashboard', dashboardContent);
