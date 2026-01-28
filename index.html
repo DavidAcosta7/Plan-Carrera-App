@@ -145,7 +145,7 @@
 
             requirePlan() {
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
-                if (!user.hasPlan) {
+                if (!user.has_plan) {
                     this.navigate('/onboarding');
                     return false;
                 }
@@ -174,7 +174,7 @@
                     name: userData.name,
                     password: this.hashPassword(userData.password),
                     createdAt: new Date().toISOString(),
-                    hasPlan: false,
+                    has_plan: false,
                     plan: null,
                     progress: {
                         completedPhases: [],
@@ -208,7 +208,7 @@
             updatePlan(plan) {
                 if (!this.currentUser) return false;
                 
-                this.currentUser.hasPlan = true;
+                this.currentUser.has_plan = true;
                 this.currentUser.plan = plan;
                 localStorage.setItem('user', JSON.stringify(this.currentUser));
                 return true;
@@ -226,12 +226,16 @@
                 return this.currentUser;
             }
 
+            getCurrentUser() {
+                return this.currentUser;
+            }
+
             isAuthenticated() {
                 return this.currentUser !== null;
             }
 
             hasPlan() {
-                return this.currentUser && this.currentUser.hasPlan;
+                return this.currentUser && this.currentUser.has_plan;
             }
 
             hashPassword(password) {
