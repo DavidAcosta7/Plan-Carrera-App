@@ -34,32 +34,54 @@
 
             try {
                 console.log('📝 Registrando usuario:', email);
+                const requestBody = {
+                    email,
+                    password,
+                    data: {}
+                };
+                console.log('📤 Body enviado:', JSON.stringify(requestBody));
+                
                 const response = await fetch(`${this.authURL}/signup`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'apikey': this.anonKey,
                     },
-                    body: JSON.stringify({
-                        email,
-                        password,
-                        data: {}
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const data = await response.json();
-                console.log('📥 Respuesta de signup:', { status: response.status, data });
+                console.log('📥 Respuesta completa de signup:', { 
+                    status: response.status, 
+                    statusText: response.statusText,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    data: data 
+                });
                 
-                if (response.ok) {
-                    console.log('✅ Usuario registrado en Auth:', data.user.id);
-                    return { success: true, user: data.user };
-                } else {
-                    console.error('❌ Error en signup:', data);
-                    return { success: false, error: data.message || 'Error en registro' };
+                // Validar que response.ok (200-299) y que data.user exista
+                if (!response.ok) {
+                    console.error('❌ Error en signup (HTTP ' + response.status + '):', data);
+                    const errorMsg = data.message || data.error || data.error_description || 'Error en registro';
+                    return { success: false, error: errorMsg };
                 }
+                
+                if (!data || !data.user) {
+                    console.error('❌ Error: respuesta OK (200) pero sin user en data', data);
+                    return { success: false, error: 'Usuario creado pero sin respuesta esperada. Por favor intenta iniciar sesión.' };
+                }
+                
+                if (!data.user.id) {
+                    console.error('❌ Error: user existe pero sin id', data.user);
+                    return { success: false, error: 'Usuario creado pero sin ID. Contacta soporte.' };
+                }
+                
+                console.log('✅ Usuario registrado en Auth:', data.user.id);
+                return { success: true, user: data.user };
+                
             } catch (error) {
                 console.error('❌ Error en signUp:', error);
-                return { success: false, error: error.message };
+                console.error('   Stack:', error.stack);
+                return { success: false, error: error.message || 'Error desconocido en registro' };
             }
         }
 
@@ -72,29 +94,46 @@
 
             try {
                 console.log('🔐 Login para:', email);
+                const requestBody = { email, password };
+                console.log('📤 Body enviado:', JSON.stringify(requestBody));
+                
                 const response = await fetch(`${this.authURL}/token?grant_type=password`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'apikey': this.anonKey,
                     },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const data = await response.json();
+                console.log('📥 Respuesta completa de login:', { 
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: data 
+                });
                 
-                if (response.ok) {
-                    localStorage.setItem('supabase_token', data.access_token);
-                    localStorage.setItem('supabase_user', JSON.stringify(data.user));
-                    console.log('✅ Login exitoso');
-                    return { success: true, user: data.user, token: data.access_token };
-                } else {
-                    console.error('❌ Error en login:', data);
-                    return { success: false, error: data.error_description || 'Error en login' };
+                // Validar que response.ok (200-299) y que data.user exista
+                if (!response.ok) {
+                    console.error('❌ Error en login (HTTP ' + response.status + '):', data);
+                    const errorMsg = data.error_description || data.error || 'Error en login';
+                    return { success: false, error: errorMsg };
                 }
+                
+                if (!data || !data.user) {
+                    console.error('❌ Error: respuesta OK (200) pero sin user en data', data);
+                    return { success: false, error: 'Login parcial: autenticación exitosa pero sin datos de usuario' };
+                }
+                
+                localStorage.setItem('supabase_token', data.access_token);
+                localStorage.setItem('supabase_user', JSON.stringify(data.user));
+                console.log('✅ Login exitoso, usuario:', data.user.id);
+                return { success: true, user: data.user, token: data.access_token };
+                
             } catch (error) {
                 console.error('❌ Error en signIn:', error);
-                return { success: false, error: error.message };
+                console.error('   Stack:', error.stack);
+                return { success: false, error: error.message || 'Error desconocido en login' };
             }
         }
 
