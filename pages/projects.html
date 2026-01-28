@@ -1,0 +1,395 @@
+<div class="projects-page">
+    <header class="projects-header">
+        <div class="header-content">
+            <h1>Mis Proyectos</h1>
+            <p>Gestiona y sigue el progreso de todos tus proyectos</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-primary" onclick="showAddProjectModal()">
+                + Nuevo Proyecto
+            </button>
+        </div>
+    </header>
+
+    <main class="projects-main">
+        <!-- Filters -->
+        <section class="projects-filters">
+            <div class="filter-tabs">
+                <button class="filter-tab active" onclick="filterProjects('all')">Todos</button>
+                <button class="filter-tab" onclick="filterProjects('active')">En Progreso</button>
+                <button class="filter-tab" onclick="filterProjects('completed')">Completados</button>
+                <button class="filter-tab" onclick="filterProjects('locked')">Bloqueados</button>
+            </div>
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar proyectos..." id="projectSearch" onkeyup="searchProjects()">
+            </div>
+        </section>
+
+        <!-- Projects Grid -->
+        <section class="projects-grid" id="projectsGrid">
+            <!-- Los proyectos se cargarán dinámicamente -->
+        </section>
+
+        <!-- Statistics -->
+        <section class="projects-stats">
+            <h2>Estadísticas de Progreso</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalProjects">0</div>
+                    <div class="stat-label">Total Proyectos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="completedProjects">0</div>
+                    <div class="stat-label">Completados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="inProgressProjects">0</div>
+                    <div class="stat-label">En Progreso</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="completionRate">0%</div>
+                    <div class="stat-label">Tasa de Completación</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Add Project Modal -->
+    <div class="modal" id="addProjectModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Agregar Nuevo Proyecto</h3>
+                <button class="modal-close" onclick="closeModal('addProjectModal')">&times;</button>
+            </div>
+            <form class="modal-body" id="addProjectForm">
+                <div class="form-group">
+                    <label for="projectTitle">Título del Proyecto</label>
+                    <input type="text" id="projectTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectDescription">Descripción</label>
+                    <textarea id="projectDescription" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="projectDifficulty">Dificultad</label>
+                    <select id="projectDifficulty">
+                        <option value="easy">Fácil</option>
+                        <option value="medium">Medio</option>
+                        <option value="hard">Difícil</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="projectPhase">Fase</label>
+                    <select id="projectPhase">
+                        <!-- Las opciones se cargarán dinámicamente -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="projectRequirements">Requisitos (uno por línea)</label>
+                    <textarea id="projectRequirements" rows="4" placeholder="Requisito 1&#10;Requisito 2&#10;Requisito 3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="projectGithub">Consejos para GitHub</label>
+                    <input type="text" id="projectGithub" placeholder="Consejos para el repositorio">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('addProjectModal')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Agregar Proyecto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Project Details Modal -->
+    <div class="modal" id="projectDetailsModal" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="detailsProjectTitle">Detalles del Proyecto</h3>
+                <button class="modal-close" onclick="closeModal('projectDetailsModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="projectDetailsContent">
+                <!-- El contenido se cargará dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentFilter = 'all';
+let userProjects = [];
+
+function initProjectsPage() {
+    if (!router.requireAuth()) return;
+    if (!router.requirePlan()) return;
+    
+    loadUserProjects();
+    renderProjects();
+    updateStatistics();
+    setupEventListeners();
+}
+
+function loadUserProjects() {
+    const user = auth.getUser();
+    if (!user || !user.plan) return;
+    
+    userProjects = [];
+    
+    // Cargar proyectos del plan del usuario
+    user.plan.phases.forEach(phase => {
+        phase.projects.forEach(project => {
+            userProjects.push({
+                ...project,
+                phaseId: phase.id,
+                phaseTitle: phase.title,
+                phaseColor: phase.color,
+                isCompleted: user.progress.completedProjects.includes(project.id),
+                isLocked: !isProjectUnlocked(phase.id, project)
+            });
+        });
+    });
+}
+
+function renderProjects() {
+    const grid = document.getElementById('projectsGrid');
+    const filteredProjects = filterProjectsByStatus(currentFilter);
+    const searchTerm = document.getElementById('projectSearch').value.toLowerCase();
+    
+    const projectsToShow = filteredProjects.filter(project => 
+        project.title.toLowerCase().includes(searchTerm) ||
+        project.description.toLowerCase().includes(searchTerm)
+    );
+    
+    if (projectsToShow.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📁</div>
+                <h3>No se encontraron proyectos</h3>
+                <p>Intenta ajustar los filtros o el término de búsqueda</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = projectsToShow.map(project => renderProjectCard(project)).join('');
+}
+
+function renderProjectCard(project) {
+    const statusClass = project.isCompleted ? 'completed' : 
+                       project.isLocked ? 'locked' : 'active';
+    
+    return `
+        <div class="project-card ${statusClass}" onclick="showProjectDetails('${project.id}')">
+            <div class="project-header">
+                <span class="difficulty-badge ${getDifficultyColor(project.difficulty)}">
+                    ${getDifficultyLabel(project.difficulty)}
+                </span>
+                <div class="project-status">
+                    ${project.isCompleted ? '✅' : project.isLocked ? '🔒' : '🔄'}
+                </div>
+            </div>
+            
+            <h3 class="project-title">${project.title}</h3>
+            <p class="project-description">${project.description}</p>
+            
+            <div class="project-meta">
+                <span class="project-phase" style="background: ${project.phaseColor}">
+                    ${project.phaseTitle}
+                </span>
+            </div>
+            
+            <div class="project-actions">
+                ${!project.isLocked ? `
+                    <button class="btn-small" onclick="event.stopPropagation(); toggleProjectStatus('${project.id}')">
+                        ${project.isCompleted ? 'Marcar como Incompleto' : 'Marcar como Completo'}
+                    </button>
+                ` : ''}
+                <button class="btn-small btn-secondary" onclick="event.stopPropagation(); showProjectDetails('${project.id}')">
+                    Ver Detalles
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function filterProjectsByStatus(status) {
+    switch (status) {
+        case 'active':
+            return userProjects.filter(p => !p.isCompleted && !p.isLocked);
+        case 'completed':
+            return userProjects.filter(p => p.isCompleted);
+        case 'locked':
+            return userProjects.filter(p => p.isLocked);
+        default:
+            return userProjects;
+    }
+}
+
+function filterProjects(status) {
+    currentFilter = status;
+    
+    // Actualizar tabs activos
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    renderProjects();
+}
+
+function searchProjects() {
+    renderProjects();
+}
+
+function updateStatistics() {
+    const total = userProjects.length;
+    const completed = userProjects.filter(p => p.isCompleted).length;
+    const inProgress = userProjects.filter(p => !p.isCompleted && !p.isLocked).length;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    
+    document.getElementById('totalProjects').textContent = total;
+    document.getElementById('completedProjects').textContent = completed;
+    document.getElementById('inProgressProjects').textContent = inProgress;
+    document.getElementById('completionRate').textContent = `${completionRate}%`;
+}
+
+function showAddProjectModal() {
+    const modal = document.getElementById('addProjectModal');
+    const phaseSelect = document.getElementById('projectPhase');
+    
+    // Cargar fases disponibles
+    const user = auth.getUser();
+    phaseSelect.innerHTML = user.plan.phases.map(phase => 
+        `<option value="${phase.id}">${phase.title}</option>`
+    ).join('');
+    
+    modal.style.display = 'flex';
+}
+
+function showProjectDetails(projectId) {
+    const project = userProjects.find(p => p.id === projectId);
+    if (!project) return;
+    
+    const modal = document.getElementById('projectDetailsModal');
+    const content = document.getElementById('projectDetailsContent');
+    
+    document.getElementById('detailsProjectTitle').textContent = project.title;
+    
+    content.innerHTML = `
+        <div class="project-details">
+            <div class="detail-section">
+                <h4>Descripción</h4>
+                <p>${project.description}</p>
+            </div>
+            
+            <div class="detail-section">
+                <h4>Información General</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Dificultad:</span>
+                        <span class="difficulty-badge ${getDifficultyColor(project.difficulty)}">
+                            ${getDifficultyLabel(project.difficulty)}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Fase:</span>
+                        <span class="project-phase" style="background: ${project.phaseColor}">
+                            ${project.phaseTitle}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Estado:</span>
+                        <span class="project-status">
+                            ${project.isCompleted ? '✅ Completado' : project.isLocked ? '🔒 Bloqueado' : '🔄 En Progreso'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h4>Requisitos</h4>
+                <ul class="requirements-list">
+                    ${project.requirements.map(req => `<li>${req}</li>`).join('')}
+                </ul>
+            </div>
+            
+            <div class="detail-section">
+                <h4>Consejos para GitHub</h4>
+                <div class="github-tips">
+                    <p>${project.githubTips}</p>
+                </div>
+            </div>
+            
+            ${!project.isLocked ? `
+                <div class="detail-actions">
+                    <button class="btn-primary" onclick="toggleProjectStatus('${project.id}'); closeModal('projectDetailsModal');">
+                        ${project.isCompleted ? 'Marcar como Incompleto' : 'Marcar como Completo'}
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    modal.style.display = 'flex';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function toggleProjectStatus(projectId) {
+    const user = auth.getUser();
+    const index = user.progress.completedProjects.indexOf(projectId);
+    
+    if (index > -1) {
+        user.progress.completedProjects.splice(index, 1);
+    } else {
+        user.progress.completedProjects.push(projectId);
+    }
+    
+    auth.updateProgress(user.progress);
+    loadUserProjects();
+    renderProjects();
+    updateStatistics();
+    
+    showNotification(
+        index > -1 ? 'Proyecto marcado como incompleto' : '¡Proyecto completado!',
+        'success'
+    );
+}
+
+function isProjectUnlocked(phaseId, project) {
+    const user = auth.getUser();
+    const phase = user.plan.phases.find(p => p.id === phaseId);
+    if (!phase) return false;
+
+    const phaseCompleted = user.progress.completedPhases.includes(phaseId);
+    const projectsCompletedInPhase = phase.projects.filter(p => user.progress.completedProjects.includes(p.id)).length;
+    const itemsCompletedCount = (phaseCompleted ? phase.items.length : 0) + projectsCompletedInPhase;
+
+    return itemsCompletedCount >= (project.unlockAt || 0);
+}
+
+function setupEventListeners() {
+    // Formulario de agregar proyecto
+    document.getElementById('addProjectForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Por ahora solo mostramos una notificación
+        // En una implementación real, agregaríamos el proyecto al plan del usuario
+        showNotification('Función de agregar proyectos próximamente', 'info');
+        closeModal('addProjectModal');
+    });
+    
+    // Cerrar modales al hacer clic fuera
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+}
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', initProjectsPage);
+</script>

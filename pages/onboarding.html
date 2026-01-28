@@ -1,0 +1,390 @@
+<div class="onboarding-page">
+    <div class="onboarding-container">
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+            <div class="progress-steps">
+                <div class="step active" data-step="1">1</div>
+                <div class="step" data-step="2">2</div>
+                <div class="step" data-step="3">3</div>
+                <div class="step" data-step="4">4</div>
+                <div class="step" data-step="5">5</div>
+                <div class="step" data-step="6">6</div>
+            </div>
+        </div>
+
+        <!-- Question Card -->
+        <div class="question-card">
+            <div class="question-header">
+                <h2 id="questionTitle">Pregunta 1 de 6</h2>
+                <p id="questionSubtitle">Cuéntanos sobre tu nivel actual</p>
+            </div>
+
+            <div class="question-content" id="questionContent">
+                <!-- Las preguntas se cargarán dinámicamente -->
+            </div>
+
+            <div class="question-actions">
+                <button class="btn-secondary" id="prevBtn" onclick="previousQuestion()" style="display: none;">
+                    Anterior
+                </button>
+                <button class="btn-primary" id="nextBtn" onclick="nextQuestion()">
+                    Siguiente
+                </button>
+                <button class="btn-primary" id="generateBtn" onclick="generatePlan()" style="display: none;">
+                    Generar Mi Plan
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state" id="loadingState" style="display: none;">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <h3>Creando tu plan personalizado...</h3>
+                <p>Claude IA está analizando tus respuestas para generar el plan perfecto para ti.</p>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="results-state" id="resultsState" style="display: none;">
+            <div class="results-content">
+                <div class="success-icon">🎉</div>
+                <h2>¡Plan Generado Exitosamente!</h2>
+                <p id="planDescription">Tu plan personalizado está listo</p>
+                <button class="btn-primary btn-large" onclick="goToDashboard()">
+                    Ver Mi Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const questions = [
+    {
+        id: 1,
+        title: "¿Cuál es tu nivel actual?",
+        subtitle: "Esto nos ayudará a adaptar el contenido a tu experiencia",
+        type: "single",
+        options: [
+            { value: "beginner", label: "🌱 Principiante", description: "Nunca he programado o tengo conocimientos básicos" },
+            { value: "intermediate", label: "🚀 Intermedio", description: "Tengo experiencia en algún lenguaje o tecnología" },
+            { value: "advanced", label: "💪 Avanzado", description: "Soy desarrollador con experiencia buscando especializarme" }
+        ]
+    },
+    {
+        id: 2,
+        title: "¿Qué quieres aprender?",
+        subtitle: "Selecciona las áreas que más te interesan",
+        type: "multiple",
+        options: [
+            { value: "python", label: "🐍 Python", description: "Data Science, AI, Backend" },
+            { value: "javascript", label: "⚡ JavaScript", description: "Frontend, Backend, Apps" },
+            { value: "sql", label: "🗄️ SQL", description: "Bases de datos, Análisis" },
+            { value: "mobile", label: "📱 Mobile", description: "iOS, Android, React Native" },
+            { value: "devops", label: "🔧 DevOps", description: "Cloud, Docker, CI/CD" },
+            { value: "ai", label: "🤖 AI/ML", description: "Machine Learning, Deep Learning" }
+        ]
+    },
+    {
+        id: 3,
+        title: "¿Cuánto tiempo tienes por día?",
+        subtitle: "Sé realista para crear un plan sostenible",
+        type: "single",
+        options: [
+            { value: "1", label: "⏰ 1 hora", description: "Poco tiempo pero constante" },
+            { value: "2", label: "⏰ 2 horas", description: "Un buen balance" },
+            { value: "3", label: "⏰ 3+ horas", description: "Mucho tiempo disponible" }
+        ]
+    },
+    {
+        id: 4,
+        title: "¿Cuál es tu objetivo principal?",
+        subtitle: "Esto ayudará a enfocar tu plan hacia metas específicas",
+        type: "single",
+        options: [
+            { value: "job", label: "💼 Conseviar trabajo", description: "Quiero mi primer trabajo o cambiar de carrera" },
+            { value: "freelance", label: "🎯 Freelance", description: "Quiero trabajar por mi cuenta" },
+            { value: "promotion", label: "📈 Promoción", description: "Quiero ascender en mi trabajo actual" },
+            { value: "project", label: "🚀 Proyecto personal", description: "Quiero construir mi propio proyecto" }
+        ]
+    },
+    {
+        id: 5,
+        title: "¿En cuánto tiempo quieres lograrlo?",
+        subtitle: "Establece un plazo realista para tus metas",
+        type: "single",
+        options: [
+            { value: "3", label: "📅 3 meses", description: "Acelerado e intenso" },
+            { value: "6", label: "📅 6 meses", description: "Balanceado y sostenible" },
+            { value: "12", label: "📅 1 año", description: "Profundo y completo" }
+        ]
+    },
+    {
+        id: 6,
+        title: "¿Tienes experiencia previa en programación?",
+        subtitle: "Cuéntanos más sobre tu background técnico",
+        type: "text",
+        placeholder: "Ej: 'He hecho cursos básicos de Python', 'Trabajo con HTML/CSS', 'Soy diseñador web'..."
+    }
+];
+
+let currentQuestion = 0;
+let answers = {};
+
+function initOnboarding() {
+    renderQuestion();
+}
+
+function renderQuestion() {
+    const question = questions[currentQuestion];
+    const questionTitle = document.getElementById('questionTitle');
+    const questionSubtitle = document.getElementById('questionSubtitle');
+    const questionContent = document.getElementById('questionContent');
+    
+    questionTitle.textContent = `Pregunta ${currentQuestion + 1} de ${questions.length}`;
+    questionSubtitle.textContent = question.subtitle;
+    
+    // Actualizar progress bar
+    updateProgress();
+    
+    // Renderizar contenido según el tipo
+    if (question.type === 'single') {
+        questionContent.innerHTML = renderSingleOptions(question);
+    } else if (question.type === 'multiple') {
+        questionContent.innerHTML = renderMultipleOptions(question);
+    } else if (question.type === 'text') {
+        questionContent.innerHTML = renderTextQuestion(question);
+    }
+    
+    // Actualizar botones
+    updateButtons();
+    
+    // Restaurar respuesta previa si existe
+    restoreAnswer();
+}
+
+function renderSingleOptions(question) {
+    return question.options.map(option => `
+        <div class="option-card" onclick="selectOption('${option.value}', 'single')">
+            <div class="option-radio">
+                <input type="radio" name="question${question.id}" value="${option.value}" id="opt_${option.value}">
+                <label for="opt_${option.value}"></label>
+            </div>
+            <div class="option-content">
+                <div class="option-label">${option.label}</div>
+                <div class="option-description">${option.description}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderMultipleOptions(question) {
+    return question.options.map(option => `
+        <div class="option-card" onclick="selectOption('${option.value}', 'multiple')">
+            <div class="option-checkbox">
+                <input type="checkbox" name="question${question.id}" value="${option.value}" id="opt_${option.value}">
+                <label for="opt_${option.value}"></label>
+            </div>
+            <div class="option-content">
+                <div class="option-label">${option.label}</div>
+                <div class="option-description">${option.description}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderTextQuestion(question) {
+    return `
+        <div class="text-question">
+            <textarea 
+                id="textAnswer" 
+                placeholder="${question.placeholder}"
+                rows="4"
+                onchange="saveTextAnswer()"
+            ></textarea>
+        </div>
+    `;
+}
+
+function selectOption(value, type) {
+    if (type === 'single') {
+        // Deseleccionar todas las opciones
+        document.querySelectorAll('.option-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        // Seleccionar la opción actual
+        const currentCard = event.currentTarget;
+        currentCard.classList.add('selected');
+        
+        // Marcar el radio button
+        const radio = currentCard.querySelector('input[type="radio"]');
+        if (radio) radio.checked = true;
+        
+        answers[`question${questions[currentQuestion].id}`] = value;
+    } else if (type === 'multiple') {
+        const currentCard = event.currentTarget;
+        currentCard.classList.toggle('selected');
+        
+        const checkbox = currentCard.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = !checkbox.checked;
+        
+        // Guardar array de valores seleccionados
+        const selected = Array.from(document.querySelectorAll('.option-card.selected input[type="checkbox"]'))
+            .map(cb => cb.value);
+        
+        answers[`question${questions[currentQuestion].id}`] = selected;
+    }
+}
+
+function saveTextAnswer() {
+    const textarea = document.getElementById('textAnswer');
+    answers[`question${questions[currentQuestion].id}`] = textarea.value;
+}
+
+function restoreAnswer() {
+    const question = questions[currentQuestion];
+    const answer = answers[`question${question.id}`];
+    
+    if (!answer) return;
+    
+    if (question.type === 'single') {
+        const radio = document.querySelector(`input[value="${answer}"]`);
+        if (radio) {
+            radio.checked = true;
+            radio.closest('.option-card').classList.add('selected');
+        }
+    } else if (question.type === 'multiple') {
+        answer.forEach(value => {
+            const checkbox = document.querySelector(`input[value="${value}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+                checkbox.closest('.option-card').classList.add('selected');
+            }
+        });
+    } else if (question.type === 'text') {
+        const textarea = document.getElementById('textAnswer');
+        if (textarea) textarea.value = answer;
+    }
+}
+
+function updateProgress() {
+    const progressFill = document.getElementById('progressFill');
+    const progressSteps = document.querySelectorAll('.step');
+    const progress = ((currentQuestion + 1) / questions.length) * 100;
+    
+    progressFill.style.width = `${progress}%`;
+    
+    progressSteps.forEach((step, index) => {
+        if (index <= currentQuestion) {
+            step.classList.add('active');
+        } else {
+            step.classList.remove('active');
+        }
+    });
+}
+
+function updateButtons() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const generateBtn = document.getElementById('generateBtn');
+    
+    // Botón anterior
+    if (currentQuestion > 0) {
+        prevBtn.style.display = 'block';
+    } else {
+        prevBtn.style.display = 'none';
+    }
+    
+    // Botones siguiente/generar
+    if (currentQuestion === questions.length - 1) {
+        nextBtn.style.display = 'none';
+        generateBtn.style.display = 'block';
+    } else {
+        nextBtn.style.display = 'block';
+        generateBtn.style.display = 'none';
+    }
+}
+
+function nextQuestion() {
+    if (currentQuestion < questions.length - 1) {
+        currentQuestion++;
+        renderQuestion();
+    }
+}
+
+function previousQuestion() {
+    if (currentQuestion > 0) {
+        currentQuestion--;
+        renderQuestion();
+    }
+}
+
+async function generatePlan() {
+    // Validar que todas las preguntas estén respondidas
+    for (let i = 0; i < questions.length; i++) {
+        const answer = answers[`question${questions[i].id}`];
+        if (!answer || (Array.isArray(answer) && answer.length === 0)) {
+            currentQuestion = i;
+            renderQuestion();
+            showNotification('Por favor responde todas las preguntas', 'error');
+            return;
+        }
+    }
+    
+    // Mostrar loading
+    document.querySelector('.question-card').style.display = 'none';
+    document.getElementById('loadingState').style.display = 'block';
+    
+    try {
+        // Generar plan con Claude
+        const plan = await claudeAPI.generatePlan(answers);
+        
+        // Guardar plan en el usuario
+        auth.updatePlan(plan);
+        
+        // Mostrar resultados
+        setTimeout(() => {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('resultsState').style.display = 'block';
+            document.getElementById('planDescription').textContent = plan.description;
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error generando plan:', error);
+        showNotification('Error generando el plan. Intenta nuevamente.', 'error');
+        
+        // Volver al cuestionario
+        document.getElementById('loadingState').style.display = 'none';
+        document.querySelector('.question-card').style.display = 'block';
+    }
+}
+
+function goToDashboard() {
+    router.navigate('/dashboard');
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
+// Inicializar cuando se carga la página
+document.addEventListener('DOMContentLoaded', initOnboarding);
+</script>

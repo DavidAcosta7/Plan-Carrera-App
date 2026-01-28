@@ -1,0 +1,195 @@
+<div class="register-page">
+    <div class="register-container">
+        <div class="register-card">
+            <div class="register-header">
+                <h1>Crear Cuenta</h1>
+                <p>Únete a miles de profesionales aprendiendo con IA</p>
+            </div>
+
+            <form class="register-form" id="registerForm">
+                <div class="form-group">
+                    <label for="name">Nombre Completo</label>
+                    <input type="text" id="name" name="name" required placeholder="Juan Pérez">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Correo Electrónico</label>
+                    <input type="email" id="email" name="email" required placeholder="juan@ejemplo.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" required placeholder="Mínimo 6 caracteres">
+                    <div class="password-strength" id="passwordStrength"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirmar Contraseña</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Repite tu contraseña">
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="terms" name="terms" required>
+                        <span>Acepto los <a href="#" class="link">términos y condiciones</a> y la <a href="#" class="link">política de privacidad</a></span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-primary btn-full" id="submitBtn">
+                    Crear Cuenta
+                </button>
+
+                <div class="form-footer">
+                    <p>¿Ya tienes cuenta? <a href="#" class="link" data-route="/login">Inicia sesión</a></p>
+                </div>
+            </form>
+        </div>
+
+        <div class="register-info">
+            <h2>¿Por qué registrarte?</h2>
+            <div class="benefits">
+                <div class="benefit">
+                    <div class="benefit-icon">🎯</div>
+                    <div>
+                        <h3>Plan Personalizado</h3>
+                        <p>IA crea un plan único basado en tus objetivos</p>
+                    </div>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">🤖</div>
+                    <div>
+                        <h3>Chat con Claude</h3>
+                        <p>Asistencia 24/7 para resolver dudas</p>
+                    </div>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">📊</div>
+                    <div>
+                        <h3>Seguimiento de Progreso</h3>
+                        <p>Visualiza tu avance y logros</p>
+                    </div>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">🚀</div>
+                    <div>
+                        <h3>Proyectos Reales</h3>
+                        <p>Construye tu portfolio profesional</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('registerForm');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const submitBtn = document.getElementById('submitBtn');
+    const passwordStrength = document.getElementById('passwordStrength');
+
+    // Validación de contraseña
+    passwordInput.addEventListener('input', function() {
+        const password = this.value;
+        let strength = 0;
+        let message = '';
+
+        if (password.length >= 6) strength++;
+        if (password.length >= 10) strength++;
+        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^a-zA-Z0-9]/.test(password)) strength++;
+
+        switch(strength) {
+            case 0:
+            case 1:
+                message = '<span class="weak">Débil</span>';
+                break;
+            case 2:
+            case 3:
+                message = '<span class="medium">Media</span>';
+                break;
+            case 4:
+            case 5:
+                message = '<span class="strong">Fuerte</span>';
+                break;
+        }
+
+        passwordStrength.innerHTML = message;
+    });
+
+    // Validación de confirmación
+    confirmPasswordInput.addEventListener('input', function() {
+        const password = passwordInput.value;
+        const confirmPassword = this.value;
+        
+        if (confirmPassword && password !== confirmPassword) {
+            this.setCustomValidity('Las contraseñas no coinciden');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+
+    // Envío del formulario
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const userData = {
+            name: formData.get('name'),
+            email: formData.get('email'),
+            password: formData.get('password')
+        };
+
+        // Validar que las contraseñas coincidan
+        if (userData.password !== formData.get('confirmPassword')) {
+            showNotification('Las contraseñas no coinciden', 'error');
+            return;
+        }
+
+        // Deshabilitar botón
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creando cuenta...';
+
+        try {
+            // Registrar usuario
+            const user = auth.register(userData);
+            
+            showNotification('¡Cuenta creada exitosamente!', 'success');
+            
+            // Redirigir al onboarding
+            setTimeout(() => {
+                router.navigate('/onboarding');
+            }, 1500);
+
+        } catch (error) {
+            console.error('Error en registro:', error);
+            showNotification('Error al crear la cuenta. Intenta nuevamente.', 'error');
+            
+            // Rehabilitar botón
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Crear Cuenta';
+        }
+    });
+});
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+</script>

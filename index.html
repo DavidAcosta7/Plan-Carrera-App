@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Carrera Pro - Crea tu Plan de Carrera con IA</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Pantalla de carga FUERA de #app para que no se destruya al renderizar -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Cargando...</h2>
+        </div>
+    </div>
+    <div id="app"></div>
+
+    <script>
+        // Sistema de Routing SPA
+        class Router {
+            constructor() {
+                this.routes = {};
+                this.currentRoute = null;
+                this.container = document.getElementById('app');
+                this.init();
+            }
+
+            init() {
+                // Escuchar cambios en el hash
+                window.addEventListener('hashchange', () => this.handleRoute());
+                window.addEventListener('load', () => this.handleRoute());
+                
+                // Manejar clicks en enlaces
+                document.addEventListener('click', (e) => {
+                    if (e.target.matches('[data-route]')) {
+                        e.preventDefault();
+                        const route = e.target.getAttribute('data-route');
+                        this.navigate(route);
+                    }
+                });
+            }
+
+            addRoute(path, content) {
+                this.routes[path] = content;
+            }
+
+            navigate(path) {
+                window.location.hash = path;
+            }
+
+            handleRoute() {
+                const loadingEl = document.getElementById('loadingScreen');
+                try {
+                    const hash = (window.location.hash || '#/').replace(/^#/, '') || '/';
+                    const content = this.routes[hash] || this.routes['/'];
+                    if (content) {
+                        this.currentRoute = content;
+                        this.render(content);
+                    } else {
+                        if (typeof landingContent !== 'undefined') {
+                            this.currentRoute = landingContent;
+                            this.render(landingContent);
+                        } else {
+                            if (loadingEl) loadingEl.style.display = 'none';
+                            this.container.innerHTML = '<p>Ruta no encontrada. <a href="#/">Ir al inicio</a></p>';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error en handleRoute:', error);
+                    if (loadingEl) loadingEl.style.display = 'none';
+                    try { this.container.innerHTML = '<div class="error">Error cargando la página</div>'; } catch (_) {}
+                }
+            }
+
+            render(content) {
+                // Ocultar pantalla de carga PRIMERO (está fuera de #app, no se destruye)
+                const loadingEl = document.getElementById('loadingScreen');
+                if (loadingEl) loadingEl.style.display = 'none';
+
+                try {
+                    if (!content) {
+                        console.warn('No hay contenido para la ruta actual');
+                        content = (typeof landingContent !== 'undefined') ? landingContent : '<div class="error">Contenido no disponible</div>';
+                    }
+                    this.container.innerHTML = content;
+                    this.executeScripts();
+                } catch (error) {
+                    console.error('Error rendering route:', error);
+                    this.container.innerHTML = '<div class="error">Error cargando la página</div>';
+                }
+            }
+
+            executeScripts() {
+                const scripts = this.container.querySelectorAll('script');
+                scripts.forEach(script => {
+                    const newScript = document.createElement('script');
+                    newScript.textContent = script.textContent;
+                    document.head.appendChild(newScript);
+                    document.head.removeChild(newScript);
+                });
+            }
+
+            requireAuth() {
+                const user = localStorage.getItem('user');
+                if (!user) {
+                    this.navigate('/register');
+                    return false;
+                }
+                return true;
+            }
+
+            requirePlan() {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (!user.hasPlan) {
+                    this.navigate('/onboarding');
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        // Sistema de Autenticación Local
+        class Auth {
+            constructor() {
+                this.currentUser = null;
+                this.init();
+            }
+
+            init() {
+                const userData = localStorage.getItem('user');
+                if (userData) {
+                    this.currentUser = JSON.parse(userData);
+                }
+            }
+
+            register(userData) {
+                const user = {
+                    id: Date.now().toString(),
+                    email: userData.email,
+                    name: userData.name,
+                    password: this.hashPassword(userData.password),
+                    createdAt: new Date().toISOString(),
+                    hasPlan: false,
+                    plan: null,
+                    progress: {
+                        completedPhases: [],
+                        completedProjects: [],
+                        expandedPhases: [1]
+                    }
+                };
+
+                localStorage.setItem('user', JSON.stringify(user));
+                this.currentUser = user;
+                return user;
+            }
+
+            login(email, password) {
+                const userData = localStorage.getItem('user');
+                if (!userData) return null;
+
+                const user = JSON.parse(userData);
+                if (user.email === email && this.verifyPassword(password, user.password)) {
+                    this.currentUser = user;
+                    return user;
+                }
+                return null;
+            }
+
+            logout() {
+                this.currentUser = null;
+                localStorage.removeItem('user');
+            }
+
+            updatePlan(plan) {
+                if (!this.currentUser) return false;
+                
+                this.currentUser.hasPlan = true;
+                this.currentUser.plan = plan;
+                localStorage.setItem('user', JSON.stringify(this.currentUser));
+                return true;
+            }
+
+            updateProgress(progress) {
+                if (!this.currentUser) return false;
+                
+                this.currentUser.progress = { ...this.currentUser.progress, ...progress };
+                localStorage.setItem('user', JSON.stringify(this.currentUser));
+                return true;
+            }
+
+            getUser() {
+                return this.currentUser;
+            }
+
+            isAuthenticated() {
+                return this.currentUser !== null;
+            }
+
+            hasPlan() {
+                return this.currentUser && this.currentUser.hasPlan;
+            }
+
+            hashPassword(password) {
+                return btoa(password + 'salt');
+            }
+
+            verifyPassword(password, hash) {
+                return this.hashPassword(password) === hash;
+            }
+        }
+
+        // Integración con Claude API
+        class ClaudeAPI {
+            constructor() {
+                this.apiKey = null;
+                this.baseURL = 'https://api.anthropic.com/v1';
+            }
+
+            setApiKey(key) {
+                this.apiKey = key;
+                localStorage.setItem('claude_api_key', key);
+            }
+
+            getApiKey() {
+                if (!this.apiKey) {
+                    this.apiKey = localStorage.getItem('claude_api_key');
+                }
+                return this.apiKey;
+            }
+
+            async generatePlan(responses) {
+                return this.getDefaultPlan(responses);
+            }
+
+            async chat(message, context = []) {
+                return "Función de chat próximamente disponible. Configura tu API key de Claude para activarla.";
+            }
+
+            getDefaultPlan(responses = {}) {
+                return {
+                    title: "Plan de Carrera Personalizado",
+                    description: "Plan adaptado a tus objetivos y nivel actual",
+                    estimatedDuration: "16-24 semanas",
+                    phases: [
+                        {
+                            id: 1,
+                            title: "FASE 1: Fundamentos",
+                            duration: "4-6 semanas",
+                            icon: "database",
+                            color: "bg-blue-500",
+                            items: [
+                                "Fundamentos de programación",
+                                "Lógica y algoritmos",
+                                "Estructuras de datos básicas",
+                                "Control de flujo",
+                                "Funciones y módulos"
+                            ],
+                            projects: [
+                                {
+                                    id: "basic-project",
+                                    difficulty: "easy",
+                                    title: "🎯 Proyecto Inicial",
+                                    description: "Tu primer proyecto aplicando conceptos básicos",
+                                    requirements: [
+                                        "Implementar funcionalidades básicas",
+                                        "Usar estructuras de control",
+                                        "Documentar el código"
+                                    ],
+                                    githubTips: "Crea un README detallado y sube tu primer commit",
+                                    unlockAt: 3
+                                }
+                            ],
+                            courses: ["Curso básico de programación"],
+                            practice: "Ejercicios diarios de lógica"
+                        }
+                    ]
+                };
+            }
+        }
+
+        // Crear instancias globales
+        const router = new Router();
+        const auth = new Auth();
+        const claudeAPI = new ClaudeAPI();
+
+        // Hacer disponibles globalmente
+        window.router = router;
+        window.auth = auth;
+        window.claudeAPI = claudeAPI;
+
+        // Iconos SVG globales
+        window.icons = {
+            database: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>`,
+            code: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`,
+            zap: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
+            'trending-up': `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>`,
+            award: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>`,
+            'check-circle': `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+            github: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>`,
+            book: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
+            lock: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`,
+            'chevron-down': `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
+            'chevron-up': `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>`
+        };
+
+        // Funciones utilitarias globales
+        window.getDifficultyColor = (difficulty) => {
+            const colors = {
+                easy: 'difficulty-easy',
+                medium: 'difficulty-medium',
+                hard: 'difficulty-hard'
+            };
+            return colors[difficulty] || 'difficulty-easy';
+        };
+
+        window.getDifficultyLabel = (difficulty) => {
+            const labels = {
+                easy: '🟢 Fácil',
+                medium: '🟡 Medio',
+                hard: '🔴 Difícil'
+            };
+            return labels[difficulty] || difficulty;
+        };
+
+        window.getPhaseColor = (color) => {
+            const colorMap = {
+                'bg-blue-500': 'text-blue',
+                'bg-green-500': 'text-green',
+                'bg-purple-500': 'text-purple',
+                'bg-orange-500': 'text-orange',
+                'bg-red-500': 'text-red'
+            };
+            return colorMap[color] || 'text-blue';
+        };
+
+        window.showNotification = (message, type = 'info', duration = 3000) => {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, duration);
+        };
+
+        // Contenido de las páginas (inline para evitar CORS)
+        const landingContent = `
+<div class="landing-page">
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                Crea tu <span class="gradient-text">Plan de Carrera</span> con IA
+            </h1>
+            <p class="hero-subtitle">
+                Transforma tu futuro profesional con un plan personalizado generado por Claude AI. 
+                Aprende las habilidades que el mercado realmente necesita.
+            </p>
+            <div class="hero-cta">
+                <button class="btn-primary" data-route="/register">
+                    Comenzar Gratis
+                </button>
+                <button class="btn-secondary" onclick="scrollToFeatures()">
+                    Ver Características
+                </button>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="floating-card">
+                <div class="card-header">
+                    <div class="dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="code-line"></div>
+                    <div class="code-line"></div>
+                    <div class="code-line"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title">Características Principales</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>Chat IA Integrado</h3>
+                    <p>Chatea con Claude AI para resolver dudas, recibir consejos y personalizar tu aprendizaje.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Proyectos Personalizados</h3>
+                    <p>Genera proyectos únicos basados en tus intereses, nivel y objetivos profesionales.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>GitHub Tracking</h3>
+                    <p>Integra tu progreso directamente con GitHub y construye tu portfolio profesional.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Plan Carrera Pro</h4>
+                    <p>El futuro del aprendizaje tecnológico impulsado por IA.</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Plan Carrera Pro. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<script>
+function scrollToFeatures() {
+    document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
+}
+</scr` + `ipt>
+        `;
+
+        const registerContent = `
+<div class="register-page">
+    <div class="register-container">
+        <div class="register-card">
+            <div class="register-header">
+                <h1>Crear Cuenta</h1>
+                <p>Únete a miles de profesionales aprendiendo con IA</p>
+            </div>
+
+            <form class="register-form" id="registerForm">
+                <div class="form-group">
+                    <label for="name">Nombre Completo</label>
+                    <input type="text" id="name" name="name" required placeholder="Juan Pérez">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Correo Electrónico</label>
+                    <input type="email" id="email" name="email" required placeholder="juan@ejemplo.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" required placeholder="Mínimo 6 caracteres">
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirmar Contraseña</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Repite tu contraseña">
+                </div>
+
+                <button type="submit" class="btn-primary btn-full" id="submitBtn">
+                    Crear Cuenta
+                </button>
+
+                <div class="form-footer">
+                    <p>¿Ya tienes cuenta? <a href="#" class="link" data-route="/login">Inicia sesión</a></p>
+                </div>
+            </form>
+        </div>
+
+        <div class="register-info">
+            <h2>¿Por qué registrarte?</h2>
+            <div class="benefits">
+                <div class="benefit">
+                    <div class="benefit-icon">🎯</div>
+                    <div>
+                        <h3>Plan Personalizado</h3>
+                        <p>IA crea un plan único basado en tus objetivos</p>
+                    </div>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">🤖</div>
+                    <div>
+                        <h3>Chat con Claude</h3>
+                        <p>Asistencia 24/7 para resolver dudas</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const userData = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        password: formData.get('password')
+    };
+
+    if (userData.password !== formData.get('confirmPassword')) {
+        showNotification('Las contraseñas no coinciden', 'error');
+        return;
+    }
+
+    try {
+        auth.register(userData);
+        showNotification('¡Cuenta creada exitosamente!', 'success');
+        setTimeout(() => {
+            router.navigate('/onboarding');
+        }, 1500);
+    } catch (error) {
+        showNotification('Error al crear la cuenta. Intenta nuevamente.', 'error');
+    }
+});
+</scr` + `ipt>
+        `;
+
+        const onboardingContent = `
+<div class="onboarding-page">
+    <div class="onboarding-container">
+        <div class="question-card">
+            <div class="question-header">
+                <h2>Onboarding Simplificado</h2>
+                <p>Responde algunas preguntas para personalizar tu plan</p>
+            </div>
+
+            <div class="question-content">
+                <div class="form-group">
+                    <label>¿Cuál es tu nivel actual?</label>
+                    <select id="level">
+                        <option value="beginner">Principiante</option>
+                        <option value="intermediate">Intermedio</option>
+                        <option value="advanced">Avanzado</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>¿Qué quieres aprender?</label>
+                    <select id="interests">
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="sql">SQL</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>¿Cuánto tiempo tienes por día?</label>
+                    <select id="time">
+                        <option value="1">1 hora</option>
+                        <option value="2">2 horas</option>
+                        <option value="3">3+ horas</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="question-actions">
+                <button class="btn-primary" onclick="generatePlan()">
+                    Generar Mi Plan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function generatePlan() {
+    const responses = {
+        level: document.getElementById('level').value,
+        interests: document.getElementById('interests').value,
+        time: document.getElementById('time').value
+    };
+
+    try {
+        const plan = await claudeAPI.generatePlan(responses);
+        auth.updatePlan(plan);
+        showNotification('¡Plan generado exitosamente!', 'success');
+        setTimeout(() => {
+            router.navigate('/dashboard');
+        }, 1500);
+    } catch (error) {
+        showNotification('Error generando el plan', 'error');
+    }
+}
+</scr` + `ipt>
+        `;
+
+        const dashboardContent = `
+<div class="dashboard-page">
+    <header class="dashboard-header">
+        <div class="header-content">
+            <div class="header-left">
+                <h1 class="dashboard-title">Mi Plan de Carrera</h1>
+                <p class="dashboard-subtitle">Tu camino hacia el éxito profesional</p>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span id="userName">Usuario</span>
+                    <button class="btn-secondary" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-main">
+        <section class="progress-overview">
+            <div class="progress-cards">
+                <div class="progress-card">
+                    <div class="progress-icon">📊</div>
+                    <div class="progress-info">
+                        <h3>Progreso Total</h3>
+                        <div class="progress-percentage">0%</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="career-plan">
+            <h2>Tu Plan Personalizado</h2>
+            <div id="phasesContainer">
+                <!-- Las fases se cargarán dinámicamente -->
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+function initDashboard() {
+    const user = auth.getUser();
+    if (!user || !user.plan) return;
+
+    document.getElementById('userName').textContent = user.name;
+    
+    // Renderizar fases del plan
+    const container = document.getElementById('phasesContainer');
+    container.innerHTML = user.plan.phases.map(function(phase) {
+        return '<div class="phase-card">' +
+            '<h3>' + phase.title + '</h3>' +
+            '<p>' + phase.duration + '</p>' +
+            '<div class="phase-items">' +
+                phase.items.map(function(item) {
+                    return '<li>' + item + '</li>';
+                }).join('') +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function logout() {
+    auth.logout();
+    router.navigate('/');
+}
+
+initDashboard();
+</scr` + `ipt>
+        `;
+
+        // Definir rutas con contenido inline
+        router.addRoute('/', landingContent);
+        router.addRoute('/register', registerContent);
+        router.addRoute('/onboarding', onboardingContent);
+        router.addRoute('/dashboard', dashboardContent);
+
+        // Ocultar loading y mostrar primera ruta; se ejecuta al final, cuando todo está definido
+        function hideLoadingScreen() {
+            var el = document.getElementById('loadingScreen');
+            if (el) el.style.display = 'none';
+        }
+
+        // Iniciar ya: rutas están registradas, DOM existe (script está al final del body)
+        try {
+            router.handleRoute();
+        } catch (e) {
+            console.error('Error al iniciar:', e);
+            hideLoadingScreen();
+            document.getElementById('app').innerHTML = '<p>No se pudo cargar. <a href="#/">Recargar</a></p>';
+        }
+
+        // Respaldo por si load/hashchange se disparan antes: volver a ocultar loading
+        window.addEventListener('load', hideLoadingScreen);
+        setTimeout(hideLoadingScreen, 1500);
+    </script>
+</body>
+</html>

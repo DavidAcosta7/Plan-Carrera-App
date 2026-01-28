@@ -1,0 +1,397 @@
+<div class="dashboard-page">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="header-content">
+            <div class="header-left">
+                <h1 class="dashboard-title">Mi Plan de Carrera</h1>
+                <p class="dashboard-subtitle" id="planDescription">Tu camino hacia el éxito profesional</p>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span id="userName">Usuario</span>
+                    <button class="btn-secondary" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        <!-- Progress Overview -->
+        <section class="progress-overview">
+            <div class="progress-cards">
+                <div class="progress-card">
+                    <div class="progress-icon">📊</div>
+                    <div class="progress-info">
+                        <h3>Progreso Total</h3>
+                        <div class="progress-percentage" id="progressPercentage">0%</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress-card">
+                    <div class="progress-icon">✅</div>
+                    <div class="progress-info">
+                        <h3>Fases Completadas</h3>
+                        <div class="progress-number" id="phasesCompleted">0/0</div>
+                    </div>
+                </div>
+                <div class="progress-card">
+                    <div class="progress-icon">🚀</div>
+                    <div class="progress-info">
+                        <h3>Proyectos Terminados</h3>
+                        <div class="progress-number" id="projectsCompleted">0/0</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Next Steps -->
+        <section class="next-steps">
+            <h2>Siguiente Paso Recomendado</h2>
+            <div class="next-step-card" id="nextStepCard">
+                <div class="next-step-content">
+                    <h3 id="nextStepTitle">Cargando...</h3>
+                    <p id="nextStepDescription">Analizando tu progreso actual...</p>
+                    <button class="btn-primary" id="nextStepAction">Ver Detalles</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Career Plan -->
+        <section class="career-plan">
+            <div class="plan-header">
+                <h2>Tu Plan Personalizado</h2>
+                <div class="plan-actions">
+                    <button class="btn-secondary" onclick="regeneratePlan()">
+                        🔄 Regenerar Plan
+                    </button>
+                    <button class="btn-secondary" onclick="exportPlan()">
+                        📥 Exportar Plan
+                    </button>
+                </div>
+            </div>
+            
+            <div class="phases-container" id="phasesContainer">
+                <!-- Las fases se cargarán dinámicamente -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Chat Component -->
+    <div id="chatComponent"></div>
+</div>
+
+<script>
+let userPlan = null;
+let userProgress = null;
+
+function initDashboard() {
+    // Verificar autenticación
+    if (!router.requireAuth()) return;
+    if (!router.requirePlan()) return;
+    
+    // Cargar datos del usuario
+    loadUserData();
+    
+    // Cargar componente de chat
+    loadChatComponent();
+    
+    // Renderizar dashboard
+    renderDashboard();
+}
+
+function loadUserData() {
+    const user = auth.getUser();
+    if (!user) return;
+    
+    userPlan = user.plan;
+    userProgress = user.progress;
+    
+    // Actualizar información del usuario
+    document.getElementById('userName').textContent = user.name;
+    document.getElementById('planDescription').textContent = userPlan.description;
+}
+
+function loadChatComponent() {
+    fetch('components/chat.html')
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('chatComponent').innerHTML = html;
+        })
+        .catch(error => console.error('Error cargando chat:', error));
+}
+
+function renderDashboard() {
+    if (!userPlan || !userProgress) return;
+    
+    // Actualizar progreso general
+    updateProgressOverview();
+    
+    // Mostrar siguiente paso
+    updateNextStep();
+    
+    // Renderizar fases
+    renderPhases();
+}
+
+function updateProgressOverview() {
+    const totalPhases = userPlan.phases.length;
+    const totalProjects = userPlan.phases.reduce((acc, phase) => acc + phase.projects.length, 0);
+    const completedPhases = userProgress.completedPhases.length;
+    const completedProjects = userProgress.completedProjects.length;
+    
+    // Calcular porcentaje
+    const phaseProgress = (completedPhases / totalPhases) * 100;
+    const projectProgress = (completedProjects / totalProjects) * 100;
+    const totalProgress = Math.round((phaseProgress + projectProgress) / 2);
+    
+    // Actualizar UI
+    document.getElementById('progressPercentage').textContent = `${totalProgress}%`;
+    document.getElementById('progressFill').style.width = `${totalProgress}%`;
+    document.getElementById('phasesCompleted').textContent = `${completedPhases}/${totalPhases}`;
+    document.getElementById('projectsCompleted').textContent = `${completedProjects}/${totalProjects}`;
+}
+
+function updateNextStep() {
+    // Encontrar la siguiente fase no completada
+    const nextPhase = userPlan.phases.find(phase => 
+        !userProgress.completedPhases.includes(phase.id)
+    );
+    
+    if (nextPhase) {
+        // Encontrar el siguiente proyecto no completado y desbloqueado
+        const nextProject = nextPhase.projects.find(project => {
+            const isCompleted = userProgress.completedProjects.includes(project.id);
+            const isUnlocked = isProjectUnlocked(nextPhase.id, project);
+            return !isCompleted && isUnlocked;
+        });
+        
+        if (nextProject) {
+            document.getElementById('nextStepTitle').textContent = nextProject.title;
+            document.getElementById('nextStepDescription').textContent = nextProject.description;
+            document.getElementById('nextStepAction').onclick = () => showProjectDetails(nextProject);
+        } else {
+            document.getElementById('nextStepTitle').textContent = `Completar ${nextPhase.title}`;
+            document.getElementById('nextStepDescription').textContent = 'Termina los proyectos actuales para desbloquear los siguientes';
+            document.getElementById('nextStepAction').onclick = () => scrollToPhase(nextPhase.id);
+        }
+    } else {
+        document.getElementById('nextStepTitle').textContent = '🎉 ¡Felicidades!';
+        document.getElementById('nextStepDescription').textContent = 'Has completado tu plan de carrera';
+        document.getElementById('nextStepAction').textContent = 'Ver Certificado';
+        document.getElementById('nextStepAction').onclick = () => showCertificate();
+    }
+}
+
+function renderPhases() {
+    const container = document.getElementById('phasesContainer');
+    container.innerHTML = userPlan.phases.map((phase, index) => renderPhase(phase, index)).join('');
+}
+
+function renderPhase(phase, index) {
+    const isExpanded = userProgress.expandedPhases.includes(phase.id);
+    const phaseCompleted = userProgress.completedPhases.includes(phase.id);
+    const phaseProjectsCompleted = phase.projects.filter(p => userProgress.completedProjects.includes(p.id)).length;
+    
+    return `
+        <div class="phase">
+            ${index < userPlan.phases.length - 1 ? '<div class="phase-connector"></div>' : ''}
+            
+            <div class="phase-icon ${phase.color}">
+                ${phaseCompleted ? icons['check-circle'] : icons[phase.icon]}
+            </div>
+            
+            <div class="phase-card ${phaseCompleted ? 'completed' : ''}">
+                <div class="phase-header" onclick="togglePhase(${phase.id})">
+                    <div class="phase-header-content">
+                        <div>
+                            <h2 class="phase-title">${phase.title}</h2>
+                            <p class="phase-meta">⏱️ ${phase.duration} • ${phaseProjectsCompleted}/${phase.projects.length} proyectos</p>
+                        </div>
+                        <div class="phase-actions">
+                            <button 
+                                class="phase-toggle-btn ${phaseCompleted ? 'completed' : ''}"
+                                onclick="event.stopPropagation(); togglePhaseComplete(${phase.id})"
+                                aria-pressed="${phaseCompleted}"
+                            >
+                                ${phaseCompleted ? '✓ Completado' : 'Marcar'}
+                            </button>
+                            <button class="expand-btn">
+                                ${isExpanded ? icons['chevron-up'] : icons['chevron-down']}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="phase-content ${isExpanded ? 'expanded' : ''}">
+                    <div class="learning-grid">
+                        <div class="learning-section">
+                            <h3 class="${getPhaseColor(phase.color)}">
+                                ${icons.book} Qué aprenderás
+                            </h3>
+                            <ul class="learning-list">
+                                ${phase.items.map(item => `<li>${item}</li>`).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div class="learning-section">
+                            <h3>📚 Cursos</h3>
+                            <ul class="course-list">
+                                ${phase.courses.map(course => `<li>${course}</li>`).join('')}
+                            </ul>
+                            <div class="practice-box">
+                                <p>💪 ${phase.practice}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="projects-section">
+                        <h3 class="projects-title">
+                            ${icons.github} Proyectos para GitHub
+                        </h3>
+                        <div class="projects-grid">
+                            ${phase.projects.map(project => renderProjectCard(project, phase.id)).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderProjectCard(project, phaseId) {
+    const isCompleted = userProgress.completedProjects.includes(project.id);
+    const isUnlocked = isProjectUnlocked(phaseId, project);
+    
+    return `
+        <div class="project-card ${isCompleted ? 'completed' : isUnlocked ? 'unlocked' : 'locked'}">
+            ${!isUnlocked ? `<div class="project-lock">${icons.lock}</div>` : ''}
+            
+            <div class="project-header">
+                <span class="difficulty-badge ${getDifficultyColor(project.difficulty)}">
+                    ${getDifficultyLabel(project.difficulty)}
+                </span>
+                <h4 class="project-title">${project.title}</h4>
+            </div>
+            
+            <p class="project-description">${project.description}</p>
+            
+            <div class="project-requirements">
+                <h4>Requisitos:</h4>
+                <ul class="requirements-list">
+                    ${project.requirements.slice(0, 3).map(req => `<li>${req}</li>`).join('')}
+                    ${project.requirements.length > 3 ? `<li>+${project.requirements.length - 3} requisitos más...</li>` : ''}
+                </ul>
+            </div>
+            
+            <div class="github-tips">
+                <p><strong>💡 GitHub:</strong> ${project.githubTips}</p>
+            </div>
+            
+            <button 
+                class="project-action-btn ${isCompleted ? 'completed' : isUnlocked ? 'unlocked' : 'locked'}"
+                onclick="toggleProject('${project.id}')"
+                ${!isUnlocked ? 'disabled' : ''}
+            >
+                ${isCompleted ? '✓ Completado' : isUnlocked ? 'Marcar como hecho' : `🔒 Desbloquea tras ${project.unlockAt} items`}
+            </button>
+        </div>
+    `;
+}
+
+function isProjectUnlocked(phaseId, project) {
+    const phase = userPlan.phases.find(p => p.id === phaseId);
+    if (!phase) return false;
+
+    const phaseCompleted = userProgress.completedPhases.includes(phaseId);
+    const projectsCompletedInPhase = phase.projects.filter(p => userProgress.completedProjects.includes(p.id)).length;
+    const itemsCompletedCount = (phaseCompleted ? phase.items.length : 0) + projectsCompletedInPhase;
+
+    return itemsCompletedCount >= (project.unlockAt || 0);
+}
+
+function togglePhase(phaseId) {
+    const index = userProgress.expandedPhases.indexOf(phaseId);
+    if (index > -1) {
+        userProgress.expandedPhases.splice(index, 1);
+    } else {
+        userProgress.expandedPhases.push(phaseId);
+    }
+    
+    auth.updateProgress(userProgress);
+    renderPhases();
+}
+
+function togglePhaseComplete(phaseId) {
+    const index = userProgress.completedPhases.indexOf(phaseId);
+    if (index > -1) {
+        userProgress.completedPhases.splice(index, 1);
+    } else {
+        userProgress.completedPhases.push(phaseId);
+    }
+    
+    auth.updateProgress(userProgress);
+    renderDashboard();
+}
+
+function toggleProject(projectId) {
+    const index = userProgress.completedProjects.indexOf(projectId);
+    if (index > -1) {
+        userProgress.completedProjects.splice(index, 1);
+    } else {
+        userProgress.completedProjects.push(projectId);
+    }
+    
+    auth.updateProgress(userProgress);
+    renderDashboard();
+}
+
+function scrollToPhase(phaseId) {
+    const phaseElement = document.querySelector(`.phase-card`);
+    if (phaseElement) {
+        phaseElement.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function showProjectDetails(project) {
+    // Implementar modal o navegación a detalles del proyecto
+    alert(`Detalles del proyecto: ${project.title}\n\n${project.description}\n\nRequisitos:\n${project.requirements.join('\n')}`);
+}
+
+function showCertificate() {
+    // Implementar modal de certificado
+    alert('¡Felicidades! Has completado tu plan de carrera. Tu certificado está siendo generado.');
+}
+
+function regeneratePlan() {
+    if (confirm('¿Estás seguro de que quieres regenerar tu plan? Perderás tu progreso actual.')) {
+        router.navigate('/onboarding');
+    }
+}
+
+function exportPlan() {
+    const planData = {
+        plan: userPlan,
+        progress: userProgress,
+        exportDate: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(planData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `plan-carrera-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function logout() {
+    auth.logout();
+    router.navigate('/');
+}
+
+// Inicializar dashboard
+document.addEventListener('DOMContentLoaded', initDashboard);
+</script>

@@ -1,0 +1,234 @@
+<!-- Chat Component -->
+<div class="chat-container" id="chatContainer">
+    <div class="chat-header">
+        <div class="chat-info">
+            <div class="chat-avatar">🤖</div>
+            <div>
+                <h3>Claude AI</h3>
+                <span class="chat-status">Online</span>
+            </div>
+        </div>
+        <button class="chat-toggle-btn" onclick="toggleChat()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+        <div class="message assistant">
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+                <p>¡Hola! Soy Claude, tu asistente de aprendizaje. Estoy aquí para ayudarte con tu plan de carrera, resolver dudas técnicas, darte consejos sobre proyectos y guiarte en tu viaje profesional.</p>
+                <p>¿En qué puedo ayudarte hoy?</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-input-container">
+        <div class="chat-suggestions">
+            <button class="suggestion-btn" onclick="sendSuggestion('¿Qué proyecto debería hacer ahora?')">
+                ¿Qué proyecto debería hacer ahora?
+            </button>
+            <button class="suggestion-btn" onclick="sendSuggestion('Ayúdame con este error de código')">
+                Ayúdame con este error de código
+            </button>
+            <button class="suggestion-btn" onclick="sendSuggestion('¿Cómo puedo mejorar mi portfolio?')">
+                ¿Cómo puedo mejorar mi portfolio?
+            </button>
+        </div>
+        <div class="chat-input-wrapper">
+            <textarea 
+                id="chatInput" 
+                placeholder="Escribe tu mensaje..."
+                rows="1"
+                onkeydown="handleChatKeydown(event)"
+                oninput="adjustTextareaHeight(this)"
+            ></textarea>
+            <button class="chat-send-btn" onclick="sendMessage()" id="sendBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Chat Button (when chat is closed) -->
+<button class="chat-float-btn" id="chatFloatBtn" onclick="toggleChat()" style="display: none;">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <span class="chat-badge">1</span>
+</button>
+
+<script>
+let chatContext = [];
+let isChatOpen = true;
+let isTyping = false;
+
+function toggleChat() {
+    const chatContainer = document.getElementById('chatContainer');
+    const floatBtn = document.getElementById('chatFloatBtn');
+    
+    isChatOpen = !isChatOpen;
+    
+    if (isChatOpen) {
+        chatContainer.style.display = 'flex';
+        floatBtn.style.display = 'none';
+        document.getElementById('chatInput').focus();
+    } else {
+        chatContainer.style.display = 'none';
+        floatBtn.style.display = 'flex';
+    }
+}
+
+function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message || isTyping) return;
+    
+    // Agregar mensaje del usuario
+    addMessage(message, 'user');
+    
+    // Limpiar input
+    input.value = '';
+    adjustTextareaHeight(input);
+    
+    // Mostrar indicador de typing
+    showTypingIndicator();
+    
+    // Enviar a Claude
+    sendToClaude(message);
+}
+
+function sendSuggestion(message) {
+    document.getElementById('chatInput').value = message;
+    sendMessage();
+}
+
+async function sendToClaude(message) {
+    isTyping = true;
+    
+    try {
+        // Obtener contexto del usuario
+        const user = auth.getUser();
+        const contextInfo = user ? {
+            currentPhase: user.plan?.phases?.find(p => 
+                !user.progress.completedPhases.includes(p.id)
+            ),
+            completedProjects: user.progress.completedProjects.length,
+            goal: user.plan?.description
+        } : {};
+        
+        // Construir contexto para Claude
+        const fullContext = [
+            ...chatContext.slice(-6), // Últimos 6 mensajes
+            {
+                role: 'system',
+                message: `Contexto del usuario: ${JSON.stringify(contextInfo)}`
+            }
+        ];
+        
+        const response = await claudeAPI.chat(message, fullContext);
+        
+        // Agregar respuesta de Claude
+        addMessage(response, 'assistant');
+        
+        // Actualizar contexto
+        chatContext.push(
+            { role: 'user', message },
+            { role: 'assistant', message: response }
+        );
+        
+        // Mantener solo los últimos 20 mensajes en el contexto
+        if (chatContext.length > 20) {
+            chatContext = chatContext.slice(-20);
+        }
+        
+    } catch (error) {
+        console.error('Error en chat:', error);
+        addMessage('Lo siento, no puedo responder en este momento. Por favor, verifica tu API key de Claude.', 'assistant');
+    } finally {
+        isTyping = false;
+        hideTypingIndicator();
+    }
+}
+
+function addMessage(message, sender) {
+    const messagesContainer = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${sender}`;
+    
+    const avatar = sender === 'user' ? '👤' : '🤖';
+    
+    messageDiv.innerHTML = `
+        <div class="message-avatar">${avatar}</div>
+        <div class="message-content">
+            <p>${message}</p>
+            <div class="message-time">${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function showTypingIndicator() {
+    const messagesContainer = document.getElementById('chatMessages');
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'message assistant typing';
+    typingDiv.id = 'typingIndicator';
+    
+    typingDiv.innerHTML = `
+        <div class="message-avatar">🤖</div>
+        <div class="message-content">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    const typingIndicator = document.getElementById('typingIndicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+}
+
+function handleChatKeydown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+}
+
+function adjustTextareaHeight(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+}
+
+// Auto-ajustar textarea al escribir
+document.addEventListener('DOMContentLoaded', function() {
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        chatInput.addEventListener('input', function() {
+            adjustTextareaHeight(this);
+        });
+    }
+});
+
+// Inicializar chat cerrado en móvil
+if (window.innerWidth <= 768) {
+    toggleChat();
+}
+</script>
