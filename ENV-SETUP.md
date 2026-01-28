@@ -101,18 +101,33 @@ cat .env.local
 
 ## 6. En Producción (Vercel)
 
-### Si está conectado automáticamente:
-✅ Las variables ya están en Vercel
-✅ No necesitas hacer nada más
+### Opción A: Vercel está conectado con Supabase (Automático) ✅
+- Las variables ya están configuradas automáticamente
+- No necesitas hacer nada más
+- Las variables se inyectan en tiempo de build
 
-### Si no está conectado:
+### Opción B: Si no está conectado automáticamente:
 1. Ve a: https://vercel.com/dashboard
 2. Tu proyecto → Settings → Environment Variables
 3. Agrega:
-   - Name: `VITE_SUPABASE_URL`
-   - Value: `https://xxxxx.supabase.co`
-4. Repite para `VITE_SUPABASE_ANON_KEY`
-5. Deploy nuevamente
+   - **Name:** `VITE_SUPABASE_URL`
+   - **Value:** `https://xxxxx.supabase.co`
+4. Agrega:
+   - **Name:** `VITE_SUPABASE_ANON_KEY`
+   - **Value:** `eyJhbGciOi...` (tu anon key)
+5. **Deploy nuevamente:** Vercel → Deploy
+
+### Verificar que está funcionando:
+1. Ve a: https://plan-carrera-app.vercel.app
+2. Abre DevTools (F12) → Console
+3. Deberías ver:
+   ```
+   🔧 Configuración de Supabase:
+     URL: ✅ https://xxxxx.supabase.co
+     Key: ✅ eyJhbGciOi...
+   ```
+
+Si ves `❌ No configurada`, vuelve al paso anterior.
 
 ---
 
