@@ -180,12 +180,13 @@
 
             register(userData) {
                 const user = {
-                    id: Date.now().toString(),
+                    id: userData.id || Date.now().toString(),
                     email: userData.email,
                     name: userData.name,
                     password: this.hashPassword(userData.password),
                     createdAt: new Date().toISOString(),
                     has_plan: false,
+                    plans: [],  // 🆕 Soporte para múltiples planes
                     plan: null,
                     progress: {
                         completedPhases: [],
@@ -612,11 +613,31 @@
 
                     console.log('✅ Usuario insertado en tabla users');
 
-                    // Guardar usuario en localStorage también (para modo offline)
-                    window.auth.register({ name, email, password });
+                    // 🔑 AUTO-LOGIN AUTOMÁTICO DESPUÉS DEL REGISTRO
+                    console.log('🔐 Iniciando auto-login automático...');
+                    const autoLoginResult = await window.supabase.signIn(email, password);
                     
+                    if (!autoLoginResult.success) {
+                        console.error('❌ Error en auto-login:', autoLoginResult.error);
+                        window.showNotification('Cuenta creada pero error en auto-login. Por favor inicia sesión.', 'warning');
+                        setTimeout(() => {
+                            window.router.navigate('/login');
+                        }, 1500);
+                        return;
+                    }
+                    
+                    // Guardar usuario en localStorage también (para modo offline)
+                    window.auth.register({ name, email, password, id: userId });
+                    
+                    // Marcar que viene desde REGISTER (para validar en onboarding)
+                    sessionStorage.setItem('fromRegister', 'true');
+                    console.log('✅ Bandera de REGISTER establecida para onboarding');
+                    
+                    console.log('✅ Auto-login completado, usuario autenticado');
                     console.log('✅ Registro completado exitosamente');
                     window.showNotification('¡Cuenta creada exitosamente!', 'success');
+                    
+                    // 👉 REDIRIGIR A ONBOARDING (NO al dashboard)
                     setTimeout(() => {
                         window.router.navigate('/onboarding');
                     }, 1500);
@@ -710,13 +731,14 @@
                     if (loginSuccess) {
                         console.log('✅ Sesión completada exitosamente');
                         window.showNotification('¡Bienvenido!', 'success');
+                        
+                        // 🔑 LIMPIAR BANDERAS DE ONBOARDING
+                        sessionStorage.removeItem('fromRegister');
+                        sessionStorage.removeItem('creatingNewPlan');
+                        
+                        // 👉 LOGIN SIEMPRE VA A DASHBOARD (NUNCA A ONBOARDING)
                         setTimeout(() => {
-                            const currentUser = window.auth.getCurrentUser();
-                            if (currentUser && currentUser.has_plan) {
-                                window.router.navigate('/dashboard');
-                            } else {
-                                window.router.navigate('/onboarding');
-                            }
+                            window.router.navigate('/dashboard');
                         }, 1500);
                     } else {
                         console.error('❌ Email o contraseña incorrectos');

@@ -166,14 +166,29 @@ function initOnboarding() {
 
     const user = auth.getUser();
     
-    // ✅ SI ya tiene plan (NO es primera vez), redirigir al dashboard
-    if (user && user.has_plan) {
-        console.log('⚠️ Usuario ya tiene plan, redirigiendo al dashboard');
+    // 🔑 VALIDAR ORIGEN: Onboarding SOLO desde REGISTER o "Nuevo Plan"
+    const fromRegister = sessionStorage.getItem('fromRegister');
+    const creatingNewPlan = sessionStorage.getItem('creatingNewPlan');
+    
+    if (!fromRegister && !creatingNewPlan) {
+        console.log('⚠️ Acceso a onboarding no válido (no viene de REGISTER ni de Nuevo Plan)');
+        console.log('  fromRegister:', fromRegister);
+        console.log('  creatingNewPlan:', creatingNewPlan);
+        router.navigate('/dashboard');
+        return;
+    }
+
+    // ✅ SI ya tiene plan Y viene de REGISTER, redirigir al dashboard
+    // (el usuario podría estar recargando la página durante el onboarding)
+    if (user && user.has_plan && fromRegister) {
+        console.log('⚠️ Usuario ya tiene plan (recarga durante onboarding), redirigiendo al dashboard');
+        sessionStorage.removeItem('fromRegister');
         router.navigate('/dashboard');
         return;
     }
 
     console.log('✅ Iniciando onboarding para:', user.name);
+    console.log('  Origen: ', fromRegister ? 'REGISTER' : 'Nuevo Plan');
     renderQuestion();
 }
 
@@ -473,12 +488,28 @@ async function generatePlan() {
             localStorage.setItem('currentPlan', JSON.stringify(generatedPlan));
         }
 
-        // ✅ Marcar que el usuario YA TIENE PLAN
+        // ✅ Marcar que el usuario YA TIENE PLAN + GUARDAR EN ARRAY DE PLANES
         if (user) {
+            // Asegurar que plans sea un array
+            if (!user.plans) {
+                user.plans = [];
+            }
+            
+            // Agregar el nuevo plan al array
+            const planWithId = {
+                ...generatedPlan,
+                id: currentPlanId || `plan-${Date.now()}`,
+                createdAt: new Date().toISOString()
+            };
+            user.plans.push(planWithId);
+            
+            // Mantener compatibilidad: también guardar como plan principal
             user.has_plan = true;
-            user.plan = generatedPlan;
+            user.plan = planWithId;
+            
             localStorage.setItem('user', JSON.stringify(user));
             console.log('✅ Usuario marcado como has_plan=true');
+            console.log('✅ Plan agregado al array de planes. Total:', user.plans.length);
         }
 
         // Marcar onboarding como completado
@@ -515,6 +546,11 @@ function retryGeneration() {
  * Navega al dashboard
  */
 function goToDashboard() {
+    // 🔑 LIMPIAR BANDERAS DE ONBOARDING al terminar
+    sessionStorage.removeItem('fromRegister');
+    sessionStorage.removeItem('creatingNewPlan');
+    
+    console.log('✅ Onboarding completado, banderas limpiadas');
     router.navigate('/dashboard');
 }
 

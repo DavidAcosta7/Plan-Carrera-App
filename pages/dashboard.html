@@ -239,9 +239,15 @@ function closeCreatePlanModal() {
  */
 function startNewPlanOnboarding() {
     closeCreatePlanModal();
+    
+    // 🔑 ESTABLECER BANDERA para validar en onboarding
+    sessionStorage.setItem('creatingNewPlan', 'true');
+    console.log('✅ Bandera creatingNewPlan establecida');
+    
     // Resetear estado del onboarding
     localStorage.removeItem('currentQuestion');
     localStorage.removeItem('userAnswers');
+    
     router.navigate('/onboarding');
 }
 
