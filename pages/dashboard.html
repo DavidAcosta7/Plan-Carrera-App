@@ -3,8 +3,8 @@
     <header class="dashboard-header">
         <div class="header-content">
             <div class="header-left">
-                <h1 class="dashboard-title">Mi Plan de Carrera</h1>
-                <p class="dashboard-subtitle" id="planDescription">Tu camino hacia el éxito profesional</p>
+                <h1 class="dashboard-title" id="dashboardTitle">Mis Planes de Carrera</h1>
+                <p class="dashboard-subtitle" id="dashboardSubtitle">Generados con IA personalizada</p>
             </div>
             <div class="header-right">
                 <div class="user-info">
@@ -17,379 +17,333 @@
 
     <!-- Main Content -->
     <main class="dashboard-main">
-        <!-- Progress Overview -->
-        <section class="progress-overview">
-            <div class="progress-cards">
-                <div class="progress-card">
-                    <div class="progress-icon">📊</div>
-                    <div class="progress-info">
-                        <h3>Progreso Total</h3>
-                        <div class="progress-percentage" id="progressPercentage">0%</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progressFill"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="progress-card">
-                    <div class="progress-icon">✅</div>
-                    <div class="progress-info">
-                        <h3>Fases Completadas</h3>
-                        <div class="progress-number" id="phasesCompleted">0/0</div>
-                    </div>
-                </div>
-                <div class="progress-card">
-                    <div class="progress-icon">🚀</div>
-                    <div class="progress-info">
-                        <h3>Proyectos Terminados</h3>
-                        <div class="progress-number" id="projectsCompleted">0/0</div>
-                    </div>
-                </div>
+        <!-- Action Bar -->
+        <section class="action-bar">
+            <button class="btn-primary" onclick="showCreatePlanModal()">
+                ➕ Nuevo Plan de Carrera
+            </button>
+            <button class="btn-secondary" onclick="refreshPlans()">
+                🔄 Actualizar
+            </button>
+        </section>
+
+        <!-- Plans List -->
+        <section class="plans-section" id="plansSection" style="display: none;">
+            <div class="plans-grid" id="plansGrid">
+                <!-- Los planes se cargarán dinámicamente -->
             </div>
         </section>
 
-        <!-- Next Steps -->
-        <section class="next-steps">
-            <h2>Siguiente Paso Recomendado</h2>
-            <div class="next-step-card" id="nextStepCard">
-                <div class="next-step-content">
-                    <h3 id="nextStepTitle">Cargando...</h3>
-                    <p id="nextStepDescription">Analizando tu progreso actual...</p>
-                    <button class="btn-primary" id="nextStepAction">Ver Detalles</button>
-                </div>
+        <!-- Empty State -->
+        <section class="empty-state" id="emptyState">
+            <div class="empty-content">
+                <div class="empty-icon">📚</div>
+                <h2>No tienes planes aún</h2>
+                <p>¡Comienza tu viaje de aprendizaje!</p>
+                <button class="btn-primary btn-large" onclick="showCreatePlanModal()">
+                    Crear Tu Primer Plan
+                </button>
             </div>
         </section>
 
-        <!-- Career Plan -->
-        <section class="career-plan">
-            <div class="plan-header">
-                <h2>Tu Plan Personalizado</h2>
-                <div class="plan-actions">
-                    <button class="btn-secondary" onclick="regeneratePlan()">
-                        🔄 Regenerar Plan
-                    </button>
-                    <button class="btn-secondary" onclick="exportPlan()">
-                        📥 Exportar Plan
-                    </button>
-                </div>
+        <!-- Loading State -->
+        <div class="loading-state" id="loadingState" style="display: none;">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <h3>Cargando tus planes...</h3>
             </div>
-            
-            <div class="phases-container" id="phasesContainer">
-                <!-- Las fases se cargarán dinámicamente -->
+        </div>
+
+        <!-- Error State -->
+        <div class="error-state" id="errorState" style="display: none;">
+            <div class="error-content">
+                <div class="error-icon">⚠️</div>
+                <h2>Error cargando planes</h2>
+                <p id="errorMessage"></p>
+                <button class="btn-primary" onclick="loadDashboard()">Reintentar</button>
             </div>
-        </section>
+        </div>
     </main>
+
+    <!-- Create Plan Modal -->
+    <div class="modal" id="createPlanModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Crear Nuevo Plan de Carrera</h2>
+                <button class="modal-close" onclick="closeCreatePlanModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás listo para crear un nuevo plan personalizado con IA?</p>
+                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                    Se te harán algunas preguntas sobre tus intereses, disponibilidad y objetivos.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeCreatePlanModal()">Cancelar</button>
+                <button class="btn-primary" onclick="startNewPlanOnboarding()">Comenzar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Chat Component -->
     <div id="chatComponent"></div>
 </div>
 
 <script>
-let userPlan = null;
-let userProgress = null;
+/**
+ * Script del Dashboard mejorado
+ * Maneja múltiples planes generados por IA desde Supabase
+ */
 
-function initDashboard() {
-    // Verificar autenticación
-    if (!router.requireAuth()) return;
-    if (!router.requirePlan()) return;
-    
-    // Cargar datos del usuario
-    loadUserData();
-    
-    // Cargar componente de chat
-    loadChatComponent();
-    
-    // Renderizar dashboard
-    renderDashboard();
-}
+let userPlans = [];
+let currentPlan = null;
+let currentPlanId = null;
 
-function loadUserData() {
-    const user = auth.getUser();
-    if (!user) return;
-    
-    userPlan = user.plan;
-    userProgress = user.progress;
-    
-    // Actualizar información del usuario
-    document.getElementById('userName').textContent = user.name;
-    document.getElementById('planDescription').textContent = userPlan.description;
-}
-
-function loadChatComponent() {
-    fetch('components/chat.html')
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('chatComponent').innerHTML = html;
-        })
-        .catch(error => console.error('Error cargando chat:', error));
-}
-
-function renderDashboard() {
-    if (!userPlan || !userProgress) return;
-    
-    // Actualizar progreso general
-    updateProgressOverview();
-    
-    // Mostrar siguiente paso
-    updateNextStep();
-    
-    // Renderizar fases
-    renderPhases();
-}
-
-function updateProgressOverview() {
-    const totalPhases = userPlan.phases.length;
-    const totalProjects = userPlan.phases.reduce((acc, phase) => acc + phase.projects.length, 0);
-    const completedPhases = userProgress.completedPhases.length;
-    const completedProjects = userProgress.completedProjects.length;
-    
-    // Calcular porcentaje
-    const phaseProgress = (completedPhases / totalPhases) * 100;
-    const projectProgress = (completedProjects / totalProjects) * 100;
-    const totalProgress = Math.round((phaseProgress + projectProgress) / 2);
-    
-    // Actualizar UI
-    document.getElementById('progressPercentage').textContent = `${totalProgress}%`;
-    document.getElementById('progressFill').style.width = `${totalProgress}%`;
-    document.getElementById('phasesCompleted').textContent = `${completedPhases}/${totalPhases}`;
-    document.getElementById('projectsCompleted').textContent = `${completedProjects}/${totalProjects}`;
-}
-
-function updateNextStep() {
-    // Encontrar la siguiente fase no completada
-    const nextPhase = userPlan.phases.find(phase => 
-        !userProgress.completedPhases.includes(phase.id)
-    );
-    
-    if (nextPhase) {
-        // Encontrar el siguiente proyecto no completado y desbloqueado
-        const nextProject = nextPhase.projects.find(project => {
-            const isCompleted = userProgress.completedProjects.includes(project.id);
-            const isUnlocked = isProjectUnlocked(nextPhase.id, project);
-            return !isCompleted && isUnlocked;
-        });
-        
-        if (nextProject) {
-            document.getElementById('nextStepTitle').textContent = nextProject.title;
-            document.getElementById('nextStepDescription').textContent = nextProject.description;
-            document.getElementById('nextStepAction').onclick = () => showProjectDetails(nextProject);
-        } else {
-            document.getElementById('nextStepTitle').textContent = `Completar ${nextPhase.title}`;
-            document.getElementById('nextStepDescription').textContent = 'Termina los proyectos actuales para desbloquear los siguientes';
-            document.getElementById('nextStepAction').onclick = () => scrollToPhase(nextPhase.id);
+/**
+ * Inicializa el dashboard
+ */
+async function loadDashboard() {
+    try {
+        // Verificar autenticación
+        if (!auth.isAuthenticated()) {
+            router.navigate('/register');
+            return;
         }
-    } else {
-        document.getElementById('nextStepTitle').textContent = '🎉 ¡Felicidades!';
-        document.getElementById('nextStepDescription').textContent = 'Has completado tu plan de carrera';
-        document.getElementById('nextStepAction').textContent = 'Ver Certificado';
-        document.getElementById('nextStepAction').onclick = () => showCertificate();
+
+        const user = auth.getUser();
+        console.log('📊 Cargando dashboard para:', user.name);
+
+        // Actualizar información del usuario
+        document.getElementById('userName').textContent = user.name;
+
+        // Mostrar loading
+        document.getElementById('loadingState').style.display = 'block';
+        document.getElementById('plansSection').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+
+        // Cargar planes del usuario
+        if (planService) {
+            userPlans = await planService.getUserPlans(user.id);
+            console.log('✅ Planes cargados:', userPlans.length);
+        } else {
+            console.warn('⚠️ PlanService no disponible, usando localStorage');
+            const savedPlan = localStorage.getItem('currentPlan');
+            if (savedPlan) {
+                userPlans = [JSON.parse(savedPlan)];
+            }
+        }
+
+        // Ocultar loading
+        document.getElementById('loadingState').style.display = 'none';
+
+        // Renderizar planes o mostrar empty state
+        if (userPlans && userPlans.length > 0) {
+            renderPlans();
+            document.getElementById('plansSection').style.display = 'block';
+        } else {
+            document.getElementById('emptyState').style.display = 'block';
+        }
+
+        // Cargar componente de chat
+        loadChatComponent();
+    } catch (error) {
+        console.error('❌ Error cargando dashboard:', error);
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'block';
+        document.getElementById('errorMessage').textContent = error.message;
     }
 }
 
-function renderPhases() {
-    const container = document.getElementById('phasesContainer');
-    container.innerHTML = userPlan.phases.map((phase, index) => renderPhase(phase, index)).join('');
-}
+/**
+ * Renderiza la lista de planes del usuario
+ */
+function renderPlans() {
+    const plansGrid = document.getElementById('plansGrid');
 
-function renderPhase(phase, index) {
-    const isExpanded = userProgress.expandedPhases.includes(phase.id);
-    const phaseCompleted = userProgress.completedPhases.includes(phase.id);
-    const phaseProjectsCompleted = phase.projects.filter(p => userProgress.completedProjects.includes(p.id)).length;
-    
-    return `
-        <div class="phase">
-            ${index < userPlan.phases.length - 1 ? '<div class="phase-connector"></div>' : ''}
-            
-            <div class="phase-icon ${phase.color}">
-                ${phaseCompleted ? icons['check-circle'] : icons[phase.icon]}
+    plansGrid.innerHTML = userPlans
+        .map((plan) => {
+            const planContent = plan.plan_content || plan;
+            return `
+        <div class="plan-card" onclick="selectPlan('${plan.id}', this)">
+            <div class="plan-card-header">
+                <h3 class="plan-card-title">${planContent.title || 'Plan sin título'}</h3>
+                <div class="plan-card-meta">
+                    <span class="plan-badge">📚 ${planContent.totalPhases || planContent.phases?.length || 0} fases</span>
+                </div>
             </div>
             
-            <div class="phase-card ${phaseCompleted ? 'completed' : ''}">
-                <div class="phase-header" onclick="togglePhase(${phase.id})">
-                    <div class="phase-header-content">
-                        <div>
-                            <h2 class="phase-title">${phase.title}</h2>
-                            <p class="phase-meta">⏱️ ${phase.duration} • ${phaseProjectsCompleted}/${phase.projects.length} proyectos</p>
-                        </div>
-                        <div class="phase-actions">
-                            <button 
-                                class="phase-toggle-btn ${phaseCompleted ? 'completed' : ''}"
-                                onclick="event.stopPropagation(); togglePhaseComplete(${phase.id})"
-                                aria-pressed="${phaseCompleted}"
-                            >
-                                ${phaseCompleted ? '✓ Completado' : 'Marcar'}
-                            </button>
-                            <button class="expand-btn">
-                                ${isExpanded ? icons['chevron-up'] : icons['chevron-down']}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="phase-content ${isExpanded ? 'expanded' : ''}">
-                    <div class="learning-grid">
-                        <div class="learning-section">
-                            <h3 class="${getPhaseColor(phase.color)}">
-                                ${icons.book} Qué aprenderás
-                            </h3>
-                            <ul class="learning-list">
-                                ${phase.items.map(item => `<li>${item}</li>`).join('')}
-                            </ul>
-                        </div>
-                        
-                        <div class="learning-section">
-                            <h3>📚 Cursos</h3>
-                            <ul class="course-list">
-                                ${phase.courses.map(course => `<li>${course}</li>`).join('')}
-                            </ul>
-                            <div class="practice-box">
-                                <p>💪 ${phase.practice}</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="projects-section">
-                        <h3 class="projects-title">
-                            ${icons.github} Proyectos para GitHub
-                        </h3>
-                        <div class="projects-grid">
-                            ${phase.projects.map(project => renderProjectCard(project, phase.id)).join('')}
-                        </div>
-                    </div>
+            <p class="plan-card-description">${
+                planContent.description || 'Plan de carrera personalizado'
+            }</p>
+            
+            <div class="plan-card-footer">
+                <div class="plan-date">${new Date(plan.created_at).toLocaleDateString('es-ES')}</div>
+                <div class="plan-actions">
+                    <button class="btn-small" onclick="event.stopPropagation(); editPlan('${plan.id}')">
+                        ✏️
+                    </button>
+                    <button class="btn-small" onclick="event.stopPropagation(); deletePlanConfirm('${plan.id}')">
+                        🗑️
+                    </button>
                 </div>
             </div>
         </div>
-    `;
+        `;
+        })
+        .join('');
 }
 
-function renderProjectCard(project, phaseId) {
-    const isCompleted = userProgress.completedProjects.includes(project.id);
-    const isUnlocked = isProjectUnlocked(phaseId, project);
-    
-    return `
-        <div class="project-card ${isCompleted ? 'completed' : isUnlocked ? 'unlocked' : 'locked'}">
-            ${!isUnlocked ? `<div class="project-lock">${icons.lock}</div>` : ''}
-            
-            <div class="project-header">
-                <span class="difficulty-badge ${getDifficultyColor(project.difficulty)}">
-                    ${getDifficultyLabel(project.difficulty)}
-                </span>
-                <h4 class="project-title">${project.title}</h4>
-            </div>
-            
-            <p class="project-description">${project.description}</p>
-            
-            <div class="project-requirements">
-                <h4>Requisitos:</h4>
-                <ul class="requirements-list">
-                    ${project.requirements.slice(0, 3).map(req => `<li>${req}</li>`).join('')}
-                    ${project.requirements.length > 3 ? `<li>+${project.requirements.length - 3} requisitos más...</li>` : ''}
-                </ul>
-            </div>
-            
-            <div class="github-tips">
-                <p><strong>💡 GitHub:</strong> ${project.githubTips}</p>
-            </div>
-            
-            <button 
-                class="project-action-btn ${isCompleted ? 'completed' : isUnlocked ? 'unlocked' : 'locked'}"
-                onclick="toggleProject('${project.id}')"
-                ${!isUnlocked ? 'disabled' : ''}
-            >
-                ${isCompleted ? '✓ Completado' : isUnlocked ? 'Marcar como hecho' : `🔒 Desbloquea tras ${project.unlockAt} items`}
-            </button>
-        </div>
-    `;
-}
+/**
+ * Selecciona un plan y lo muestra
+ */
+async function selectPlan(planId, element) {
+    currentPlanId = planId;
+    currentPlan = userPlans.find((p) => p.id === planId);
 
-function isProjectUnlocked(phaseId, project) {
-    const phase = userPlan.phases.find(p => p.id === phaseId);
-    if (!phase) return false;
-
-    const phaseCompleted = userProgress.completedPhases.includes(phaseId);
-    const projectsCompletedInPhase = phase.projects.filter(p => userProgress.completedProjects.includes(p.id)).length;
-    const itemsCompletedCount = (phaseCompleted ? phase.items.length : 0) + projectsCompletedInPhase;
-
-    return itemsCompletedCount >= (project.unlockAt || 0);
-}
-
-function togglePhase(phaseId) {
-    const index = userProgress.expandedPhases.indexOf(phaseId);
-    if (index > -1) {
-        userProgress.expandedPhases.splice(index, 1);
-    } else {
-        userProgress.expandedPhases.push(phaseId);
+    // Actualizar UI
+    document.querySelectorAll('.plan-card').forEach((card) => {
+        card.classList.remove('active');
+    });
+    if (element) {
+        element.classList.add('active');
     }
-    
-    auth.updateProgress(userProgress);
-    renderPhases();
+
+    // Navigar a la vista de plan
+    router.navigate(`/plan/${planId}`);
 }
 
-function togglePhaseComplete(phaseId) {
-    const index = userProgress.completedPhases.indexOf(phaseId);
-    if (index > -1) {
-        userProgress.completedPhases.splice(index, 1);
-    } else {
-        userProgress.completedPhases.push(phaseId);
-    }
-    
-    auth.updateProgress(userProgress);
-    renderDashboard();
+/**
+ * Abre el modal para crear un nuevo plan
+ */
+function showCreatePlanModal() {
+    document.getElementById('createPlanModal').style.display = 'flex';
 }
 
-function toggleProject(projectId) {
-    const index = userProgress.completedProjects.indexOf(projectId);
-    if (index > -1) {
-        userProgress.completedProjects.splice(index, 1);
-    } else {
-        userProgress.completedProjects.push(projectId);
-    }
-    
-    auth.updateProgress(userProgress);
-    renderDashboard();
+/**
+ * Cierra el modal de crear plan
+ */
+function closeCreatePlanModal() {
+    document.getElementById('createPlanModal').style.display = 'none';
 }
 
-function scrollToPhase(phaseId) {
-    const phaseElement = document.querySelector(`.phase-card`);
-    if (phaseElement) {
-        phaseElement.scrollIntoView({ behavior: 'smooth' });
+/**
+ * Inicia el onboarding para crear un nuevo plan
+ */
+function startNewPlanOnboarding() {
+    closeCreatePlanModal();
+    // Resetear estado del onboarding
+    localStorage.removeItem('currentQuestion');
+    localStorage.removeItem('userAnswers');
+    router.navigate('/onboarding');
+}
+
+/**
+ * Edita un plan existente
+ */
+function editPlan(planId) {
+    console.log('✏️ Editando plan:', planId);
+    // TODO: Implementar edición de plan
+    showNotification('Funcionalidad de edición próximamente', 'info');
+}
+
+/**
+ * Confirma eliminación de plan
+ */
+function deletePlanConfirm(planId) {
+    if (confirm('¿Estás seguro de que quieres eliminar este plan?')) {
+        deletePlan(planId);
     }
 }
 
-function showProjectDetails(project) {
-    // Implementar modal o navegación a detalles del proyecto
-    alert(`Detalles del proyecto: ${project.title}\n\n${project.description}\n\nRequisitos:\n${project.requirements.join('\n')}`);
-}
+/**
+ * Elimina un plan
+ */
+async function deletePlan(planId) {
+    try {
+        if (planService) {
+            await planService.deletePlan(planId);
+        }
 
-function showCertificate() {
-    // Implementar modal de certificado
-    alert('¡Felicidades! Has completado tu plan de carrera. Tu certificado está siendo generado.');
-}
+        // Actualizar lista
+        userPlans = userPlans.filter((p) => p.id !== planId);
+        renderPlans();
 
-function regeneratePlan() {
-    if (confirm('¿Estás seguro de que quieres regenerar tu plan? Perderás tu progreso actual.')) {
-        router.navigate('/onboarding');
+        showNotification('Plan eliminado', 'success');
+
+        if (userPlans.length === 0) {
+            document.getElementById('plansSection').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error eliminando plan:', error);
+        showNotification('Error eliminando plan', 'error');
     }
 }
 
-function exportPlan() {
-    const planData = {
-        plan: userPlan,
-        progress: userProgress,
-        exportDate: new Date().toISOString()
-    };
-    
-    const blob = new Blob([JSON.stringify(planData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `plan-carrera-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+/**
+ * Recarga los planes
+ */
+async function refreshPlans() {
+    document.getElementById('loadingState').style.display = 'block';
+    await loadDashboard();
 }
 
-function logout() {
-    auth.logout();
-    router.navigate('/');
+/**
+ * Carga el componente de chat
+ */
+function loadChatComponent() {
+    // Implementar carga del componente de chat si existe
+    const chatComponent = document.getElementById('chatComponent');
+    if (chatComponent && currentPlan) {
+        // Cargar chat con contexto del plan actual
+    }
+}
+
+/**
+ * Muestra una notificación
+ */
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+/**
+ * Logout del usuario
+ */
+async function logout() {
+    try {
+        if (auth) {
+            await auth.logout();
+        }
+        router.navigate('/');
+    } catch (error) {
+        console.error('Error en logout:', error);
+        router.navigate('/');
+    }
+}
+
+// Cargar dashboard cuando se monta el componente
+if (document.readyState !== 'loading') {
+    loadDashboard();
+} else {
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+}
 }
 
 // Inicializar dashboard

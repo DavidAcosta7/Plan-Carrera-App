@@ -1,52 +1,302 @@
-# Plan de Carrera Pro
+# Plan de Carrera Pro - Powered by Claude AI
 
-Una aplicación web interactiva para seguir tu plan de carrera en desarrollo de software, enfocada en SQL → Python → Integración → Aplicación Real.
+🤖 **Plataforma SaaS inteligente que genera planes de carrera personalizados usando Claude IA de Anthropic**
 
-## 🚀 Características
+La IA es el núcleo del producto. Cada usuario obtiene un plan 100% personalizado basado en sus respuestas a un flujo de onboarding.
 
-- **5 Fases de aprendizaje** con 15 proyectos prácticos
-- **Sistema de progreso** con persistencia local
-- **Desbloqueo progresivo** de proyectos según tu avance
-- **Interfaz moderna** y responsive
-- **Autosave automático** cada 2 segundos
-- **Notificaciones** en tiempo real
+---
+
+## ✨ Características Principales
+
+### 🧠 Generación Inteligente de Planes
+- **IA Generativa**: Planes creados dinámicamente por Claude basados en:
+  - Nivel actual (principiante, intermedio, avanzado)
+  - Intereses tecnológicos (Python, JavaScript, SQL, Mobile, DevOps, AI/ML)
+  - Tiempo disponible diario (1h, 2h, 3h+)
+  - Objetivo profesional (trabajo, freelance, promoción, proyecto)
+  - Plazo deseado (3, 6, 12 meses)
+
+### 📚 Planes Personalizados
+- **4-6 Fases Progresivas**: Adaptadas al perfil del usuario
+- **2-3 Proyectos por Fase**: Easy, Medium, Hard (gradación de dificultad)
+- **Recursos Recomendados**: Cursos, tutoriales, libros
+- **Tips para GitHub**: Cómo presentar proyectos profesionalmente
+
+### 👥 Multi-Usuario SaaS
+- Autenticación con Supabase
+- Múltiples planes por usuario
+- Cada usuario tiene su dashboard personalizado
+- Historial de planes y progreso
+
+### 💾 Persistencia Completa
+- Base de datos Supabase (PostgreSQL)
+- Planes guardados con metadata
+- Progreso sincronizado
+- Auditoría de generación
+
+### 🔐 Seguridad
+- RLS Policies (Row Level Security)
+- Usuarios solo ven sus propios datos
+- API Keys en variables de entorno
+- Soft delete (no borrado definitivo)
+
+---
+
+## 🚀 Quick Start (5 minutos)
+
+### 1. Clonar Repositorio
+```bash
+git clone <repo-url>
+cd Plan-Carrera-App
+```
+
+### 2. Obtener API Keys
+- **Claude**: https://console.anthropic.com/ (obtén `sk-ant-...`)
+- **Supabase**: https://app.supabase.com/ (obtén URL y Anon Key)
+
+### 3. Configurar Entorno
+```bash
+cp .env.example .env.local
+# Edita .env.local con tus keys:
+# VITE_ANTHROPIC_API_KEY=sk-ant-xxxxx
+# VITE_SUPABASE_URL=https://xxxxx.supabase.co
+# VITE_SUPABASE_ANON_KEY=sb_publishable_xxxxx
+```
+
+### 4. Setup Base de Datos
+```bash
+# 1. Abre Supabase SQL Editor
+# 2. Copia contenido de: supabase-schema-ai-plans.sql
+# 3. Ejecuta en Supabase
+```
+
+### 5. Iniciar
+```bash
+npm install
+npm run dev
+# Abre http://localhost:5173
+```
+
+**➡️ Ver guía detallada en [QUICK-START-CLAUDE.md](QUICK-START-CLAUDE.md)**
+
+---
 
 ## 📋 Estructura del Proyecto
 
 ```
-PlanCarrera/
-├── index.html          # Estructura HTML principal
-├── styles.css          # Estilos CSS optimizados
-├── data.js             # Datos de las fases y proyectos
-├── app.js              # Lógica de la aplicación
-└── README.md           # Este archivo
+Plan-Carrera-App/
+├── index.html                          # Punto de entrada
+├── styles.css                          # Estilos principales
+├── vite.config.js                      # Config Vite
+│
+├── utils/
+│   ├── ai-service.js                   # ✨ Servicio Claude IA
+│   ├── plan-service.js                 # 💾 Gestión de planes en BD
+│   ├── auth-service.js                 # 👤 Autenticación mejorada
+│   ├── supabase-client.js              # 🗄️ Cliente Supabase
+│   ├── router.js                       # 🔄 SPA Router
+│   └── claude.js                       # (Heredado, usar ai-service)
+│
+├── pages/
+│   ├── landing.html                    # Landing page
+│   ├── register.html                   # Registro
+│   ├── login.html                      # Login
+│   ├── onboarding.html                 # ✨ Flujo de 5 preguntas → Plan
+│   ├── dashboard.html                  # 📊 Dashboard con múltiples planes
+│   └── projects.html                   # Proyectos (futuro)
+│
+├── components/
+│   └── chat.html                       # Chat component (futuro)
+│
+├── assets/                             # Imágenes, iconos
+│
+├── supabase-schema-ai-plans.sql        # 🗄️ Schema Supabase
+│
+├── AI-INTEGRATION.md                   # 📚 Documentación completa
+├── IMPLEMENTATION-CHECKLIST.md         # ✅ Checklist de implementación
+├── QUICK-START-CLAUDE.md               # 🚀 Guía rápida
+│
+└── README.md                           # Este archivo
 ```
 
-## 🛠️ Tecnologías Utilizadas
+---
 
-- **Frontend**: HTML5, CSS3, JavaScript Vanilla
-- **Almacenamiento**: LocalStorage (persistencia local)
-- **Diseño**: CSS Grid, Flexbox, Variables CSS
-- **Iconos**: SVG inline (optimizado)
-- **Fuentes**: Google Fonts (Inter)
+## 🔄 Flujo de Usuario
 
-## 🎯 Fases del Plan
+### Primer Login (Usuario Nuevo)
+```
+1. Usuario se registra
+2. Sistema detecta "primer login"
+3. Redirige a /onboarding automáticamente
+4. Usuario responde 5 preguntas
+5. Claude IA genera plan personalizado
+6. Plan se guarda en Supabase
+7. Usuario ve dashboard con su plan
+```
 
-### FASE 1: Dominio de SQL (6-8 semanas)
-- Fundamentos de SQL, JOINs, subconsultas
-- Proyectos: Biblioteca, Sistema de Ventas, Sistema Hospitalario
+### Login Recurrente (Usuario Existente)
+```
+1. Usuario login exitoso
+2. Sistema detecta "tiene planes"
+3. Redirige directamente a /dashboard
+4. Ve su(s) plan(es) guardado(s)
+```
 
-### FASE 2: Fundamentos Python (5-6 semanas)
-- Sintaxis, estructuras de control, manejo de archivos
-- Proyectos: Gestor de Tareas CLI, Analizador de CSV, Scraper Web
+### Crear Nuevo Plan
+```
+1. En dashboard, click "Nuevo Plan de Carrera"
+2. Modal de confirmación
+3. Vuelve a onboarding (responde 5 preguntas nuevas)
+4. Claude genera un NUEVO plan
+5. Se guarda sin sobrescribir planes anteriores
+6. Dashboard muestra ambos planes
+```
 
-### FASE 3: Integración Python + SQL (4-5 semanas)
-- Conexión a bases de datos, transacciones
-- Proyectos: Inventario SQLite, Sistema Bancario, ETL Pipeline
+---
 
-### FASE 4: Aplicación Real (6-8 semanas)
-- APIs REST, autenticación, testing
-- Proyectos: Blog API, E-commerce Backend, CRM Empresarial
+## 🧠 Cómo Funciona la IA
+
+### Prompt Enviado a Claude
+```
+- Nivel actual del usuario
+- Intereses tecnológicos
+- Horas disponibles por día
+- Objetivo profesional
+- Plazo para lograrlo
+- Experiencia previa
+```
+
+### Respuesta de Claude (JSON)
+```json
+{
+  "title": "Plan personalizado para ti",
+  "description": "Descripción única",
+  "estimatedDuration": "6 meses",
+  "totalPhases": 4,
+  "phases": [
+    {
+      "id": 1,
+      "title": "Fundamentos",
+      "duration": "4-6 semanas",
+      "topics": ["tema1", "tema2"],
+      "projects": [
+        {
+          "title": "Proyecto 1",
+          "difficulty": "easy",
+          "requirements": ["req1"],
+          "githubTips": "..."
+        }
+      ],
+      "resources": [...]
+    }
+  ]
+}
+```
+
+### Validación
+- Estructura JSON obligatoria
+- Todas las fases deben tener proyectos
+- Dificultad valida: easy/medium/hard
+- Sin datos fijos ni hardcodeados
+
+---
+
+## 🗄️ Base de Datos (Supabase)
+
+### Tablas Principales
+
+**career_plans** - Planes generados por IA
+```sql
+- id (UUID)
+- user_id (FK auth.users)
+- title, description, objective
+- plan_content (JSONB) ← Respuesta de Claude
+- user_answers (JSONB) ← Respuestas del usuario
+- is_primary (BOOLEAN) ← Plan activo
+- created_at, updated_at
+```
+
+**plan_progress** - Seguimiento de progreso
+```sql
+- id (UUID)
+- user_id, plan_id (FKs)
+- completed_phases (JSONB)
+- completed_projects (JSONB)
+- last_updated
+```
+
+**plan_generation_log** - Auditoría
+```sql
+- id (UUID)
+- user_id, plan_id
+- prompt_used, model_used
+- generation_time_ms, success, error_message
+- created_at
+```
+
+---
+
+## 🔐 Seguridad
+
+- ✅ RLS Policies: Cada usuario solo ve sus datos
+- ✅ API Keys en `.env` (nunca en código)
+- ✅ Supabase Auth integrado
+- ✅ Soft delete (status = 'deleted')
+- ✅ Auditoría completa de generaciones
+
+---
+
+## 📚 Documentación
+
+| Documento | Contenido |
+|-----------|-----------|
+| [AI-INTEGRATION.md](AI-INTEGRATION.md) | Integración completa de Claude, schema, RLS, troubleshooting |
+| [IMPLEMENTATION-CHECKLIST.md](IMPLEMENTATION-CHECKLIST.md) | ✅ Checklist detallado de implementación |
+| [QUICK-START-CLAUDE.md](QUICK-START-CLAUDE.md) | 🚀 Guía rápida en 5 minutos |
+
+---
+
+## 🛠️ Tech Stack
+
+### Backend
+- **API IA**: Claude (Anthropic)
+- **Autenticación**: Supabase Auth
+- **Base de Datos**: PostgreSQL (Supabase)
+- **RLS**: Row Level Security
+
+### Frontend
+- **Framework**: HTML5, CSS3, Vanilla JavaScript
+- **SPA Router**: Routing con hash
+- **Diseño**: CSS Grid, Flexbox
+- **Cliente Supabase**: JavaScript SDK
+
+### Hosting
+- **Vercel** (Recomendado) o cualquier static host
+- **Supabase** para BD
+
+---
+
+## 🎯 Roadmap
+
+### Fase 1 (Actual) ✅
+- ✅ Integración Claude AI
+- ✅ Generación de planes dinámicos
+- ✅ Multi-usuario con Supabase
+- ✅ Onboarding mejorado
+- ✅ Dashboard con múltiples planes
+
+### Fase 2 (Próxima)
+- [ ] Chat contextual durante aprendizaje
+- [ ] Refinamiento de planes con IA
+- [ ] Análisis de progreso
+- [ ] Integración GitHub
+
+### Fase 3 (Futuro)
+- [ ] Premium features
+- [ ] Exportar PDF
+- [ ] Mobile app
+- [ ] Analytics dashboard
+- [ ] Multi-idioma
 
 ### FASE 5: Nivel Experto (Continuo)
 - Optimización avanzada, Data Warehousing
