@@ -3,8 +3,8 @@
     <header class="dashboard-header">
         <div class="header-content">
             <div class="header-left">
-                <h1 class="dashboard-title" id="dashboardTitle">Mis Planes de Carrera</h1>
-                <p class="dashboard-subtitle" id="dashboardSubtitle">Generados con IA personalizada</p>
+                <h1 class="dashboard-title" id="dashboardTitle">Dashboard</h1>
+                <p class="dashboard-subtitle" id="dashboardSubtitle">Gestiona tus planes de carrera</p>
             </div>
             <div class="header-right">
                 <div class="user-info">
@@ -17,18 +17,9 @@
 
     <!-- Main Content -->
     <main class="dashboard-main">
-        <!-- Action Bar -->
-        <section class="action-bar">
-            <button class="btn-primary" onclick="showCreatePlanModal()">
-                ➕ Nuevo Plan de Carrera
-            </button>
-            <button class="btn-secondary" onclick="refreshPlans()">
-                🔄 Actualizar
-            </button>
-        </section>
-
-        <!-- Plans List -->
+        <!-- Sección: Mis Plan Carrera -->
         <section class="plans-section" id="plansSection" style="display: none;">
+            <h2 class="section-title">Mis Plan Carrera</h2>
             <div class="plans-grid" id="plansGrid">
                 <!-- Los planes se cargarán dinámicamente -->
             </div>
@@ -37,12 +28,10 @@
         <!-- Empty State -->
         <section class="empty-state" id="emptyState">
             <div class="empty-content">
+                <h2 class="section-title">Mis Plan Carrera</h2>
                 <div class="empty-icon">📚</div>
-                <h2>No tienes planes aún</h2>
+                <h3>No tienes planes aún</h3>
                 <p>¡Comienza tu viaje de aprendizaje!</p>
-                <button class="btn-primary btn-large" onclick="showCreatePlanModal()">
-                    Crear Tu Primer Plan
-                </button>
             </div>
         </section>
 
@@ -63,27 +52,15 @@
                 <button class="btn-primary" onclick="loadDashboard()">Reintentar</button>
             </div>
         </div>
+
+        <!-- Botón Nuevo Plan Carrera (parte inferior, centrado) -->
+        <div class="new-plan-button-container">
+            <button class="btn-primary btn-large" onclick="startNewPlanOnboarding()">
+                Nuevo Plan Carrera
+            </button>
+        </div>
     </main>
 
-    <!-- Create Plan Modal -->
-    <div class="modal" id="createPlanModal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Crear Nuevo Plan de Carrera</h2>
-                <button class="modal-close" onclick="closeCreatePlanModal()">✕</button>
-            </div>
-            <div class="modal-body">
-                <p>¿Estás listo para crear un nuevo plan personalizado con IA?</p>
-                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-                    Se te harán algunas preguntas sobre tus intereses, disponibilidad y objetivos.
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeCreatePlanModal()">Cancelar</button>
-                <button class="btn-primary" onclick="startNewPlanOnboarding()">Comenzar</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Chat Component -->
     <div id="chatComponent"></div>
@@ -112,13 +89,6 @@ async function loadDashboard() {
 
         const user = auth.getUser();
         
-        // ✅ SI NO tiene plan (es primera vez), redirigir al onboarding
-        if (!user || !user.has_plan) {
-            console.log('⚠️ Usuario sin plan, redirigiendo al onboarding');
-            router.navigate('/onboarding');
-            return;
-        }
-
         console.log('📊 Cargando dashboard para:', user.name);
 
         // Actualizar información del usuario
@@ -164,6 +134,7 @@ async function loadDashboard() {
 
 /**
  * Renderiza la lista de planes del usuario
+ * Muestra: Título, Objetivo, Plazo y Fecha de creación
  */
 function renderPlans() {
     const plansGrid = document.getElementById('plansGrid');
@@ -171,21 +142,37 @@ function renderPlans() {
     plansGrid.innerHTML = userPlans
         .map((plan) => {
             const planContent = plan.plan_content || plan;
+            const title = plan.title || planContent.title || 'Plan sin título';
+            const objective = plan.objective || planContent.objective || planContent.description || 'Objetivo no especificado';
+            const deadline = plan.estimated_duration || planContent.estimatedDuration || planContent.deadline || 'Plazo no especificado';
+            const createdAt = plan.created_at ? new Date(plan.created_at).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }) : 'Fecha no disponible';
+            
             return `
         <div class="plan-card" onclick="selectPlan('${plan.id}', this)">
             <div class="plan-card-header">
-                <h3 class="plan-card-title">${planContent.title || 'Plan sin título'}</h3>
-                <div class="plan-card-meta">
-                    <span class="plan-badge">📚 ${planContent.totalPhases || planContent.phases?.length || 0} fases</span>
+                <h3 class="plan-card-title">${title}</h3>
+            </div>
+            
+            <div class="plan-card-body">
+                <div class="plan-card-field">
+                    <span class="plan-field-label">Objetivo:</span>
+                    <span class="plan-field-value">${objective}</span>
+                </div>
+                <div class="plan-card-field">
+                    <span class="plan-field-label">Plazo:</span>
+                    <span class="plan-field-value">${deadline}</span>
+                </div>
+                <div class="plan-card-field">
+                    <span class="plan-field-label">Fecha de creación:</span>
+                    <span class="plan-field-value">${createdAt}</span>
                 </div>
             </div>
             
-            <p class="plan-card-description">${
-                planContent.description || 'Plan de carrera personalizado'
-            }</p>
-            
             <div class="plan-card-footer">
-                <div class="plan-date">${new Date(plan.created_at).toLocaleDateString('es-ES')}</div>
                 <div class="plan-actions">
                     <button class="btn-small" onclick="event.stopPropagation(); editPlan('${plan.id}')">
                         ✏️
@@ -216,30 +203,16 @@ async function selectPlan(planId, element) {
         element.classList.add('active');
     }
 
-    // Navigar a la vista de plan
-    router.navigate(`/plan/${planId}`);
-}
-
-/**
- * Abre el modal para crear un nuevo plan
- */
-function showCreatePlanModal() {
-    document.getElementById('createPlanModal').style.display = 'flex';
-}
-
-/**
- * Cierra el modal de crear plan
- */
-function closeCreatePlanModal() {
-    document.getElementById('createPlanModal').style.display = 'none';
+    // Navigar a la vista de plan (ruta según especificaciones: /dashboard/plans/[planId])
+    // Nota: Actualmente redirige a /plan/[planId] hasta que se implemente la página de detalle
+    router.navigate(`/dashboard/plans/${planId}`);
 }
 
 /**
  * Inicia el onboarding para crear un nuevo plan
+ * Llamado desde el botón "Nuevo Plan Carrera"
  */
 function startNewPlanOnboarding() {
-    closeCreatePlanModal();
-    
     // 🔑 ESTABLECER BANDERA para validar en onboarding
     sessionStorage.setItem('creatingNewPlan', 'true');
     console.log('✅ Bandera creatingNewPlan establecida');
@@ -248,6 +221,7 @@ function startNewPlanOnboarding() {
     localStorage.removeItem('currentQuestion');
     localStorage.removeItem('userAnswers');
     
+    // Redirigir al onboarding
     router.navigate('/onboarding');
 }
 
@@ -358,8 +332,4 @@ if (document.readyState !== 'loading') {
 } else {
     document.addEventListener('DOMContentLoaded', loadDashboard);
 }
-}
-
-// Inicializar dashboard
-document.addEventListener('DOMContentLoaded', initDashboard);
 </script>
