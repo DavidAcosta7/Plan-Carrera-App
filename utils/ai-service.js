@@ -310,26 +310,32 @@ Please provide an updated plan in JSON format that addresses the user's feedback
     /**
      * Obtiene consejos personalizados para un proyecto específico
      */
-    async getProjectAdvice(projectTitle, difficulty, userLevel) {
+    async getProjectAdvice(plan, progress, userMessage) {
         if (!this.isConfigured) {
             throw new Error('Claude API no configurada');
         }
 
+        // Obtener información del proyecto del mensaje o del plan
+        const currentPhase = plan.phases?.find(p => 
+            !progress.completedPhases.includes(p.id)
+        );
+        
+        const projectContext = currentPhase?.projects?.[0]?.title || 'un proyecto';
+
         const prompt = `
-As a senior developer, provide specific, actionable advice for completing this project:
+You are a senior developer mentor. Provide specific, actionable advice based on this context:
 
-Project: ${projectTitle}
-Difficulty: ${difficulty}
-Developer Level: ${userLevel}
+USER'S LEARNING PLAN: ${plan.title}
+CURRENT PHASE: ${currentPhase?.title || 'General'}
+USER MESSAGE/QUESTION: ${userMessage}
 
-Include:
-1. Step-by-step approach
-2. Common pitfalls to avoid
-3. Best practices
-4. Resources to reference
-5. Expected timeline
+Provide practical, encouraging advice that:
+1. Relates to their specific learning path
+2. Addresses their question directly
+3. Suggests concrete next steps
+4. References relevant resources if needed
 
-Be concise and practical.`;
+Be concise and supportive.`;
 
         try {
             return await this.callClaude(prompt);

@@ -114,6 +114,14 @@ async function sendToClaude(message) {
     isTyping = true;
     
     try {
+        // Verificar que aiService está disponible
+        if (!window.aiService) {
+            addMessage('❌ Servicio de IA no disponible. Por favor recarga la página.', 'assistant');
+            isTyping = false;
+            hideTypingIndicator();
+            return;
+        }
+        
         // Obtener contexto del usuario
         const user = auth.getUser();
         const contextInfo = user ? {
@@ -124,7 +132,7 @@ async function sendToClaude(message) {
             goal: user.plan?.description
         } : {};
         
-        // Construir contexto para Claude
+        // Construir contexto para aiService
         const fullContext = [
             ...chatContext.slice(-6), // Últimos 6 mensajes
             {
@@ -133,7 +141,32 @@ async function sendToClaude(message) {
             }
         ];
         
-        const response = await claudeAPI.chat(message, fullContext);
+        // Llamar a aiService (método contextual si está disponible)
+        let response;
+        if (window.aiService.isConfigured) {
+            // Si hay contexto del plan, usar método especializado
+            if (user && user.plan) {
+                // Intentar usar método contextual
+                if (message.toLowerCase().includes('siguiente paso') || message.toLowerCase().includes('qué hacer')) {
+                    response = await window.aiService.getNextStepRecommendation(user.plan, user.progress);
+                } else if (message.toLowerCase().includes('proyecto') || message.toLowerCase().includes('proyecto')) {
+                    response = await window.aiService.getProjectAdvice(
+                        user.plan, 
+                        user.progress, 
+                        message
+                    );
+                } else {
+                    // Usar respuesta genérica con contexto
+                    response = await window.aiService.callClaude(message);
+                }
+            } else {
+                // Usuario sin plan - solo chat genérico
+                response = await window.aiService.callClaude(message);
+            }
+        } else {
+            // API no configurada - respuesta automática
+            response = '❌ El servicio de IA no está configurado. Configura tu API key de Claude (VITE_ANTHROPIC_API_KEY) para activar el chat.';
+        }
         
         // Agregar respuesta de Claude
         addMessage(response, 'assistant');

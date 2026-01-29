@@ -258,84 +258,32 @@
             }
         }
 
-        // Integración con Claude API
-        class ClaudeAPI {
-            constructor() {
-                this.apiKey = null;
-                this.baseURL = 'https://api.anthropic.com/v1';
-            }
-
-            setApiKey(key) {
-                this.apiKey = key;
-                localStorage.setItem('claude_api_key', key);
-            }
-
-            getApiKey() {
-                if (!this.apiKey) {
-                    this.apiKey = localStorage.getItem('claude_api_key');
-                }
-                return this.apiKey;
-            }
-
-            async generatePlan(responses) {
-                return this.getDefaultPlan(responses);
-            }
-
-            async chat(message, context = []) {
-                return "Función de chat próximamente disponible. Configura tu API key de Claude para activarla.";
-            }
-
-            getDefaultPlan(responses = {}) {
-                return {
-                    title: "Plan de Carrera Personalizado",
-                    description: "Plan adaptado a tus objetivos y nivel actual",
-                    estimatedDuration: "16-24 semanas",
-                    phases: [
-                        {
-                            id: 1,
-                            title: "FASE 1: Fundamentos",
-                            duration: "4-6 semanas",
-                            icon: "database",
-                            color: "bg-blue-500",
-                            items: [
-                                "Fundamentos de programación",
-                                "Lógica y algoritmos",
-                                "Estructuras de datos básicas",
-                                "Control de flujo",
-                                "Funciones y módulos"
-                            ],
-                            projects: [
-                                {
-                                    id: "basic-project",
-                                    difficulty: "easy",
-                                    title: "🎯 Proyecto Inicial",
-                                    description: "Tu primer proyecto aplicando conceptos básicos",
-                                    requirements: [
-                                        "Implementar funcionalidades básicas",
-                                        "Usar estructuras de control",
-                                        "Documentar el código"
-                                    ],
-                                    githubTips: "Crea un README detallado y sube tu primer commit",
-                                    unlockAt: 3
-                                }
-                            ],
-                            courses: ["Curso básico de programación"],
-                            practice: "Ejercicios diarios de lógica"
-                        }
-                    ]
-                };
-            }
-        }
-
         // Crear instancias globales
         const router = new Router();
         const auth = new Auth();
-        const claudeAPI = new ClaudeAPI();
 
         // Hacer disponibles globalmente
         window.router = router;
         window.auth = auth;
-        window.claudeAPI = claudeAPI;
+        
+        // Esperar a que AIService se cargue desde ai-service.js
+        // Se asignará a window.aiService cuando esté disponible
+        let aiServiceReady = false;
+        const checkAIService = setInterval(() => {
+            if (typeof AIService !== 'undefined' && !aiServiceReady) {
+                window.aiService = new AIService();
+                aiServiceReady = true;
+                console.log('✅ AIService inicializado y disponible globalmente');
+                clearInterval(checkAIService);
+            }
+        }, 100);
+        
+        // Si no se carga en 5 segundos, registrar error
+        setTimeout(() => {
+            if (!aiServiceReady) {
+                console.error('⚠️ AIService no se cargó después de 5 segundos');
+            }
+        }, 5000);
 
         // Iconos SVG globales
         window.icons = {
@@ -410,21 +358,92 @@
         };
 
         window.generatePlan = async function() {
-            const responses = {
-                level: document.getElementById('level').value,
-                interests: document.getElementById('interests').value,
-                time: document.getElementById('time').value
-            };
+            // Esperar a que aiService esté listo
+            if (!window.aiService) {
+                // Si aún no está listo, esperar
+                let attempts = 0;
+                return new Promise((resolve) => {
+                    const waitForAI = setInterval(() => {
+                        attempts++;
+                        if (window.aiService || attempts > 50) {
+                            clearInterval(waitForAI);
+                            if (!window.aiService) {
+                                console.error('❌ AIService no disponible');
+                                window.showNotification('Error: Servicio de IA no disponible', 'error');
+                                resolve();
+                                return;
+                            }
+                            generateWithAI();
+                        }
+                    }, 100);
+                });
+            } else {
+                generateWithAI();
+            }
+            
+            async function generateWithAI() {
+                // Obtener respuestas del formulario
+                const responses = {
+                    level: document.getElementById('level')?.value || 'beginner',
+                    interests: (document.getElementById('interests')?.value || 'python').split(',').map(i => i.trim()),
+                    timePerDay: document.getElementById('time')?.value || '2',
+                    goal: 'career-growth',
+                    deadline: '6',
+                    experience: ''
+                };
 
-            try {
-                const plan = await window.claudeAPI.generatePlan(responses);
-                window.auth.updatePlan(plan);
-                window.showNotification('¡Plan generado exitosamente!', 'success');
-                setTimeout(() => {
-                    window.router.navigate('/dashboard');
-                }, 1500);
-            } catch (error) {
-                window.showNotification('Error generando el plan', 'error');
+                try {
+                    console.log('🚀 Generando plan con AIService...');
+                    
+                    // Verificar que aiService está configurado
+                    if (!window.aiService.isConfigured) {
+                        console.warn('⚠️ Claude API no está configurada. Usando plan por defecto.');
+                        window.showNotification('⚠️ Usa un plan por defecto - configura tu API key de Claude', 'warning');
+                        const defaultPlan = {
+                            title: "Plan de Carrera Personalizado",
+                            description: "Plan adaptado a tus objetivos y nivel actual",
+                            estimatedDuration: "16-24 semanas",
+                            phases: [
+                                {
+                                    id: 1,
+                                    title: "FASE 1: Fundamentos",
+                                    duration: "4-6 semanas",
+                                    icon: "database",
+                                    color: "bg-blue-500",
+                                    items: ["Fundamentos", "Lógica", "Estructuras"],
+                                    projects: [],
+                                    courses: ["Curso básico"],
+                                    practice: "Ejercicios diarios"
+                                }
+                            ]
+                        };
+                        window.auth.updatePlan(defaultPlan);
+                        window.showNotification('✅ Plan generado (versión por defecto)', 'success');
+                        setTimeout(() => {
+                            window.router.navigate('/dashboard');
+                        }, 1500);
+                        return;
+                    }
+                    
+                    // Llamar a AIService
+                    const result = await window.aiService.generateCareerPlan(responses);
+                    
+                    if (!result.success) {
+                        console.error('❌ Error en respuesta de AIService:', result);
+                        window.showNotification('Error generando el plan', 'error');
+                        return;
+                    }
+                    
+                    console.log('✅ Plan generado exitosamente');
+                    window.auth.updatePlan(result.plan);
+                    window.showNotification('¡Plan generado exitosamente!', 'success');
+                    setTimeout(() => {
+                        window.router.navigate('/dashboard');
+                    }, 1500);
+                } catch (error) {
+                    console.error('❌ Error generando plan:', error);
+                    window.showNotification('Error: ' + error.message, 'error');
+                }
             }
         };
 
