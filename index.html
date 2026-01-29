@@ -96,8 +96,9 @@
                             if (hash === '/login' && window.initLoginForm) {
                                 window.initLoginForm();
                             }
-                            if (hash === '/dashboard' && window.initDashboard) {
-                                window.initDashboard();
+                            // ✅ Llama a loadDashboard (definido en dashboard.html) en lugar de initDashboard
+                            if (hash === '/dashboard' && window.loadDashboard) {
+                                window.loadDashboard();
                             }
                         }, 100);
                     } else {

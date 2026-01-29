@@ -111,6 +111,14 @@ async function loadDashboard() {
         }
 
         const user = auth.getUser();
+        
+        // ✅ SI NO tiene plan (es primera vez), redirigir al onboarding
+        if (!user || !user.has_plan) {
+            console.log('⚠️ Usuario sin plan, redirigiendo al onboarding');
+            router.navigate('/onboarding');
+            return;
+        }
+
         console.log('📊 Cargando dashboard para:', user.name);
 
         // Actualizar información del usuario

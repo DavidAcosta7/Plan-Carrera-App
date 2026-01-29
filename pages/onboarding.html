@@ -164,7 +164,16 @@ function initOnboarding() {
         return;
     }
 
-    console.log('✅ Iniciando onboarding para:', auth.getUser().name);
+    const user = auth.getUser();
+    
+    // ✅ SI ya tiene plan (NO es primera vez), redirigir al dashboard
+    if (user && user.has_plan) {
+        console.log('⚠️ Usuario ya tiene plan, redirigiendo al dashboard');
+        router.navigate('/dashboard');
+        return;
+    }
+
+    console.log('✅ Iniciando onboarding para:', user.name);
     renderQuestion();
 }
 
@@ -462,6 +471,14 @@ async function generatePlan() {
         } else {
             console.warn('⚠️ Guardando plan en localStorage');
             localStorage.setItem('currentPlan', JSON.stringify(generatedPlan));
+        }
+
+        // ✅ Marcar que el usuario YA TIENE PLAN
+        if (user) {
+            user.has_plan = true;
+            user.plan = generatedPlan;
+            localStorage.setItem('user', JSON.stringify(user));
+            console.log('✅ Usuario marcado como has_plan=true');
         }
 
         // Marcar onboarding como completado
