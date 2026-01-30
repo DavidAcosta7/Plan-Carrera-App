@@ -79,27 +79,77 @@
                 window.location.hash = path;
             }
 
-            handleRoute() {
+            async handleRoute() {
                 const loadingEl = document.getElementById('loadingScreen');
                 try {
                     const hash = (window.location.hash || '#/').replace(/^#/, '') || '/';
+
+                    // Ruta dinámica: vista detalle de plan /dashboard/plans/[planId]
+                    if (hash.startsWith('/dashboard/plans/')) {
+                        const planId = hash.replace(/^\/dashboard\/plans\//, '').split('/')[0];
+                        if (planId) {
+                            try {
+                                const res = await fetch('./pages/plan-detail.html');
+                                const content = await res.text();
+                                this.currentRoute = content;
+                                this.render(content);
+                                setTimeout(() => {
+                                    if (window.loadPlanDetail) window.loadPlanDetail();
+                                }, 100);
+                            } catch (e) {
+                                console.error('Error cargando vista de plan:', e);
+                                this.container.innerHTML = '<div class="error">Error cargando el plan. <a href="#/dashboard" data-route="/dashboard">Volver al Dashboard</a></div>';
+                            }
+                        }
+                        return;
+                    }
+
+                    // Dashboard: cargar desde pages/dashboard.html (Mis Plan Carrera + Nuevo Plan Carrera)
+                    if (hash === '/dashboard') {
+                        try {
+                            const res = await fetch('./pages/dashboard.html');
+                            const content = await res.text();
+                            this.currentRoute = content;
+                            this.render(content);
+                            setTimeout(() => {
+                                if (window.loadDashboard) window.loadDashboard();
+                            }, 100);
+                        } catch (e) {
+                            console.error('Error cargando dashboard:', e);
+                            const fallback = this.routes['/dashboard'] || this.routes['/'];
+                            this.render(fallback || '<p>Error cargando dashboard. <a href="#/">Ir al inicio</a></p>');
+                            setTimeout(() => { if (window.loadDashboard) window.loadDashboard(); }, 100);
+                        }
+                        return;
+                    }
+
+                    // Onboarding: cargar desde pages/onboarding.html (mismo flujo de preguntas)
+                    if (hash === '/onboarding') {
+                        try {
+                            const res = await fetch('./pages/onboarding.html');
+                            const content = await res.text();
+                            this.currentRoute = content;
+                            this.render(content);
+                            setTimeout(() => {
+                                if (window.initOnboarding) window.initOnboarding();
+                            }, 100);
+                        } catch (e) {
+                            console.error('Error cargando onboarding:', e);
+                            const fallback = this.routes['/onboarding'];
+                            this.render(fallback || '<p>Error cargando onboarding.</p>');
+                            setTimeout(() => { if (window.initOnboarding) window.initOnboarding(); }, 100);
+                        }
+                        return;
+                    }
+
+                    // Rutas estáticas: landing, login, register
                     const content = this.routes[hash] || this.routes['/'];
                     if (content) {
                         this.currentRoute = content;
                         this.render(content);
-                        
-                        // Inicializar forms específicos después de renderizar
                         setTimeout(() => {
-                            if (hash === '/register' && window.initRegisterForm) {
-                                window.initRegisterForm();
-                            }
-                            if (hash === '/login' && window.initLoginForm) {
-                                window.initLoginForm();
-                            }
-                            // ✅ Llama a loadDashboard (definido en dashboard.html) en lugar de initDashboard
-                            if (hash === '/dashboard' && window.loadDashboard) {
-                                window.loadDashboard();
-                            }
+                            if (hash === '/register' && window.initRegisterForm) window.initRegisterForm();
+                            if (hash === '/login' && window.initLoginForm) window.initLoginForm();
                         }, 100);
                     } else {
                         if (typeof landingContent !== 'undefined') {

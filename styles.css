@@ -1077,11 +1077,556 @@ button {
     justify-content: center;
 }
 
-/* Dashboard Page Styles */
+/* ========================================
+   DASHBOARD - Rediseño moderno (tema claro)
+   Fondos claros, acentos morado/rosa, bordes 12–16px, sombras sutiles
+   ======================================== */
+
 .dashboard-page {
     min-height: 100vh;
 }
 
+/* Tema claro solo en dashboard: fondos blancos/gris claro + morado/rosa */
+.dashboard-theme-light {
+    background: #f8f7fc;
+    color: #1e293b;
+}
+
+.dashboard-theme-light .dashboard-title,
+.dashboard-theme-light .section-title,
+.dashboard-theme-light .activity-title {
+    color: #1e293b;
+}
+
+.dashboard-theme-light .dashboard-subtitle,
+.dashboard-theme-light .plan-card-objective,
+.dashboard-theme-light .activity-meta,
+.dashboard-theme-light .empty-state p {
+    color: #64748b;
+}
+
+/* Layout: sidebar + área principal */
+.dashboard-page.dashboard-theme-light {
+    display: flex;
+    min-height: 100vh;
+}
+
+.dashboard-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* ----- Sidebar ----- */
+.dashboard-sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: #fff;
+    border-right: 1px solid rgba(148, 163, 184, 0.15);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 0;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 1.5rem 1.5rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    margin-bottom: 1rem;
+}
+
+.sidebar-logo {
+    font-size: 1.75rem;
+}
+
+.sidebar-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0 0.75rem;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    color: #64748b;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-item:hover {
+    background: rgba(139, 92, 246, 0.08);
+    color: #7c3aed;
+}
+
+.sidebar-item.active {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(236, 72, 153, 0.08));
+    color: #7c3aed;
+}
+
+.sidebar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sidebar-label {
+    white-space: nowrap;
+}
+
+.sidebar-footer {
+    padding: 1rem 0.75rem 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.sidebar-item-logout {
+    width: 100%;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+}
+
+.sidebar-item-logout:hover {
+    color: #dc2626;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* ----- Header: bienvenida + CTA ----- */
+.dashboard-theme-light .dashboard-header {
+    background: #fff;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    padding: 1.5rem 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.dashboard-theme-light .header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.dashboard-theme-light .header-left {
+    flex: 1;
+}
+
+.dashboard-theme-light .dashboard-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.dashboard-theme-light .dashboard-subtitle {
+    font-size: 0.875rem;
+}
+
+.dashboard-theme-light .header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Botón CTA principal: Nuevo Plan Carrera */
+.btn-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: var(--font-family);
+    color: #fff;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #ec4899 100%);
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+}
+
+.btn-cta:active {
+    transform: translateY(0);
+}
+
+.btn-cta-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.btn-cta-empty {
+    margin-top: 1rem;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: #64748b;
+    border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.btn-ghost:hover {
+    background: rgba(100, 116, 139, 0.08);
+    color: #475569;
+}
+
+/* ----- Main: grid de planes + panel actividad ----- */
+.dashboard-theme-light .dashboard-main {
+    flex: 1;
+    display: flex;
+    gap: 1.5rem;
+    padding: 1.5rem 2rem 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.dashboard-content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Sección Mis Plan Carrera */
+.dashboard-theme-light .plans-section .section-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    color: #1e293b;
+}
+
+.dashboard-theme-light .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25rem;
+}
+
+/* Tarjetas de plan: portada + título + tags + progreso */
+.dashboard-theme-light .plan-card {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-theme-light .plan-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(139, 92, 246, 0.12);
+    border-color: rgba(139, 92, 246, 0.25);
+}
+
+.dashboard-theme-light .plan-card.active {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.plan-card-cover {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.plan-card-cover-0 {
+    background: linear-gradient(135deg, #a78bfa 0%, #c084fc 100%);
+}
+
+.plan-card-cover-1 {
+    background: linear-gradient(135deg, #f472b6 0%, #fb7185 100%);
+}
+
+.plan-card-cover-2 {
+    background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+}
+
+.plan-card-cover-icon {
+    font-size: 2.5rem;
+    opacity: 0.9;
+}
+
+.plan-card-content {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+.plan-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.plan-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 8px;
+    background: rgba(139, 92, 246, 0.1);
+    color: #7c3aed;
+}
+
+.plan-tag-date {
+    background: rgba(100, 116, 139, 0.1);
+    color: #64748b;
+}
+
+.dashboard-theme-light .plan-card-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.plan-card-objective {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.plan-card-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: auto;
+}
+
+.plan-progress-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.plan-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8b5cf6, #ec4899);
+    border-radius: 6px;
+    transition: width 0.3s ease;
+}
+
+.plan-progress-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    min-width: 2rem;
+}
+
+.plan-card-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.plan-card-action {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: rgba(100, 116, 139, 0.08);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s ease;
+}
+
+.plan-card-action:hover {
+    background: rgba(139, 92, 246, 0.15);
+}
+
+/* ----- Panel de Actividad ----- */
+.dashboard-activity {
+    width: 280px;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.activity-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.25rem;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.activity-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 1rem 0;
+}
+
+.activity-progress-ring {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 0.75rem;
+}
+
+.progress-ring {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.progress-ring-bg {
+    fill: none;
+    stroke: rgba(148, 163, 184, 0.2);
+    stroke-width: 6;
+}
+
+.progress-ring-fill {
+    fill: none;
+    stroke: url(#progressGradient);
+    stroke: #8b5cf6;
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-dasharray: 0 226;
+    transition: stroke-dasharray 0.4s ease;
+}
+
+.progress-ring-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.activity-meta {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin: 0;
+    text-align: center;
+}
+
+.activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa, #f472b6);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.activity-text {
+    font-size: 0.875rem;
+    color: #475569;
+}
+
+/* Empty state (tema claro) */
+.dashboard-theme-light .empty-state {
+    background: #fff;
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.dashboard-theme-light .empty-icon-wrap {
+    margin-bottom: 1rem;
+}
+
+.dashboard-theme-light .empty-icon {
+    font-size: 3rem;
+    opacity: 0.8;
+}
+
+.dashboard-theme-light .empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+/* Loading y error (tema claro) */
+.dashboard-theme-light .loading-state,
+.dashboard-theme-light .error-state {
+    background: #fff;
+    border-radius: 16px;
+    padding: 3rem;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.dashboard-theme-light .loading-state h3,
+.dashboard-theme-light .error-state h2 {
+    color: #1e293b;
+}
+
+.dashboard-theme-light .error-state #errorMessage {
+    color: #64748b;
+}
+
+/* Fallback: dashboard sin clase theme (mantener estilos globales) */
 .dashboard-header {
     background: var(--card-bg);
     backdrop-filter: blur(12px);
@@ -1382,6 +1927,157 @@ button {
     margin-bottom: 2rem;
 }
 
+/* Vista detalle de plan: /dashboard/plans/[planId] */
+.plan-detail-page {
+    min-height: 100vh;
+    background: var(--bg-primary);
+}
+
+.plan-detail-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--card-border);
+    background: var(--card-bg);
+}
+
+.plan-detail-header .back-link {
+    display: inline-block;
+    color: var(--blue);
+    text-decoration: none;
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+}
+
+.plan-detail-header .back-link:hover {
+    text-decoration: underline;
+}
+
+.plan-detail-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+}
+
+.plan-detail-meta {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.plan-detail-main {
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.plan-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+}
+
+.plan-summary .summary-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 1rem;
+    padding: 1.25rem;
+}
+
+.plan-summary .summary-card h2 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.5rem 0;
+}
+
+.plan-summary .summary-card p {
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.plan-phases .section-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    color: var(--text-primary);
+}
+
+.phase-detail-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.phase-detail-card h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.phase-detail-card .phase-duration {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    margin: 0 0 1rem 0;
+}
+
+.phase-detail-card .phase-items {
+    list-style: none;
+    padding-left: 0;
+    margin: 0 0 1rem 0;
+}
+
+.phase-detail-card .phase-items li {
+    padding: 0.35rem 0;
+    padding-left: 1.25rem;
+    position: relative;
+    color: var(--text-secondary);
+}
+
+.phase-detail-card .phase-items li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--blue);
+}
+
+.phase-detail-card .phase-projects h4 {
+    font-size: 1rem;
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.phase-detail-card .project-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.phase-detail-card .project-item:last-child {
+    border-bottom: none;
+}
+
+.plan-detail-page .loading-state,
+.plan-detail-page .error-state {
+    text-align: center;
+    padding: 2rem;
+}
+
+.plan-detail-page .error-state .btn-primary {
+    margin-top: 1rem;
+}
+
+.empty-phases {
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 1rem 0;
+}
+
 .phase-card {
     background: var(--card-bg);
     backdrop-filter: blur(12px);
@@ -1641,6 +2337,60 @@ button {
     }
     
     .plans-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Dashboard rediseño: responsive */
+    .dashboard-theme-light .dashboard-sidebar {
+        width: 72px;
+        min-width: 72px;
+        padding: 1rem 0;
+    }
+    
+    .dashboard-theme-light .sidebar-title,
+    .dashboard-theme-light .sidebar-label {
+        display: none;
+    }
+    
+    .dashboard-theme-light .sidebar-brand {
+        justify-content: center;
+        padding: 0 0.75rem 1rem;
+    }
+    
+    .dashboard-theme-light .sidebar-item {
+        justify-content: center;
+        padding: 0.75rem;
+    }
+    
+    .dashboard-theme-light .dashboard-main {
+        flex-direction: column;
+        padding: 1rem;
+    }
+    
+    .dashboard-theme-light .dashboard-activity {
+        width: 100%;
+        min-width: 0;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .dashboard-theme-light .activity-card {
+        flex: 1;
+        min-width: 260px;
+    }
+    
+    .dashboard-theme-light .header-right {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .dashboard-theme-light .btn-cta {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .dashboard-theme-light .plans-grid {
         grid-template-columns: 1fr;
     }
     

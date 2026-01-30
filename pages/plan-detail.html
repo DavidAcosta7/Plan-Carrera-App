@@ -1,0 +1,166 @@
+<!--
+  Vista detallada de un Plan de Carrera
+  Ruta: /dashboard/plans/[planId]
+  Muestra título, objetivo, plazo, fases y proyectos del plan.
+-->
+<div class="plan-detail-page">
+    <header class="plan-detail-header">
+        <div class="header-content">
+            <a href="#/dashboard" class="back-link" data-route="/dashboard">← Volver al Dashboard</a>
+            <h1 class="plan-detail-title" id="planDetailTitle">Plan de Carrera</h1>
+            <p class="plan-detail-meta" id="planDetailMeta"></p>
+        </div>
+    </header>
+
+    <main class="plan-detail-main">
+        <!-- Resumen del plan (se muestra al cargar) -->
+        <section class="plan-summary" id="planSummary" style="display: none;">
+            <div class="summary-card">
+                <h2>Objetivo</h2>
+                <p id="planObjective">—</p>
+            </div>
+            <div class="summary-card">
+                <h2>Plazo</h2>
+                <p id="planDeadline">—</p>
+            </div>
+            <div class="summary-card">
+                <h2>Fecha de creación</h2>
+                <p id="planCreatedAt">—</p>
+            </div>
+        </section>
+
+        <!-- Fases del plan (se muestra al cargar) -->
+        <section class="plan-phases" id="planPhasesSection" style="display: none;">
+            <h2 class="section-title">Fases del plan</h2>
+            <div id="phasesContainer">
+                <!-- Las fases se cargan dinámicamente -->
+            </div>
+        </section>
+
+        <!-- Loading -->
+        <div class="loading-state" id="loadingState">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <p>Cargando plan...</p>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <div class="error-state" id="errorState" style="display: none;">
+            <div class="error-content">
+                <p id="errorMessage"></p>
+                <button class="btn-primary" data-route="/dashboard">Volver al Dashboard</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+/**
+ * Vista detallada de Plan de Carrera
+ * Obtiene planId del hash (#/dashboard/plans/[planId]) y carga el plan desde BD.
+ */
+(function() {
+    function getPlanIdFromHash() {
+        const hash = (window.location.hash || '').replace(/^#/, '');
+        const match = hash.match(/^\/dashboard\/plans\/([^/]+)/);
+        return match ? match[1] : null;
+    }
+
+    async function loadPlanDetail() {
+        const planId = getPlanIdFromHash();
+        const loadingEl = document.getElementById('loadingState');
+        const errorEl = document.getElementById('errorState');
+        const summaryEl = document.getElementById('planSummary');
+        const phasesSection = document.getElementById('planPhasesSection');
+
+        if (!planId) {
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (errorEl) {
+                document.getElementById('errorMessage').textContent = 'ID de plan no válido.';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+
+        if (!auth || !auth.isAuthenticated()) {
+            if (window.router) window.router.navigate('/register');
+            return;
+        }
+
+        try {
+            if (loadingEl) loadingEl.style.display = 'block';
+            if (errorEl) errorEl.style.display = 'none';
+
+            let plan = null;
+            if (typeof planService !== 'undefined' && planService && planService.getPlanById) {
+                plan = await planService.getPlanById(planId);
+            } else {
+                const saved = localStorage.getItem('currentPlan');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.id === planId) plan = { ...parsed, plan_content: parsed };
+                }
+            }
+
+            if (loadingEl) loadingEl.style.display = 'none';
+
+            if (!plan) {
+                document.getElementById('errorMessage').textContent = 'No se encontró el plan.';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            const content = plan.plan_content || plan;
+            const title = plan.title || content.title || 'Plan sin título';
+            const objective = plan.objective || content.objective || content.description || 'Objetivo no especificado';
+            const deadline = plan.estimated_duration || content.estimatedDuration || content.deadline || 'Plazo no especificado';
+            const createdAt = plan.created_at
+                ? new Date(plan.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
+                : 'Fecha no disponible';
+
+            document.getElementById('planDetailTitle').textContent = title;
+            document.getElementById('planDetailMeta').textContent = `Plazo: ${deadline}`;
+            document.getElementById('planObjective').textContent = objective;
+            document.getElementById('planDeadline').textContent = deadline;
+            document.getElementById('planCreatedAt').textContent = createdAt;
+
+            const phases = content.phases || [];
+            const container = document.getElementById('phasesContainer');
+            if (phases.length === 0) {
+                container.innerHTML = '<p class="empty-phases">No hay fases definidas en este plan.</p>';
+            } else {
+                container.innerHTML = phases.map(function(phase) {
+                    const items = (phase.items || []).map(function(item) { return '<li>' + item + '</li>'; }).join('');
+                    const projects = (phase.projects || []).map(function(p) {
+                        return '<div class="project-item"><strong>' + (p.title || p.name) + '</strong>' +
+                            (p.description ? '<p>' + p.description + '</p>' : '') + '</div>';
+                    }).join('');
+                    return '<div class="phase-detail-card">' +
+                        '<h3>' + (phase.title || 'Fase') + '</h3>' +
+                        (phase.duration ? '<p class="phase-duration">' + phase.duration + '</p>' : '') +
+                        (items ? '<ul class="phase-items">' + items + '</ul>' : '') +
+                        (projects ? '<div class="phase-projects"><h4>Proyectos</h4>' + projects + '</div>' : '') +
+                        '</div>';
+                }).join('');
+            }
+
+            if (summaryEl) summaryEl.style.display = 'grid';
+            if (phasesSection) phasesSection.style.display = 'block';
+        } catch (err) {
+            console.error('Error cargando plan:', err);
+            if (loadingEl) loadingEl.style.display = 'none';
+            document.getElementById('errorMessage').textContent = err.message || 'Error al cargar el plan.';
+            errorEl.style.display = 'block';
+        }
+    }
+
+    window.loadPlanDetail = loadPlanDetail;
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadPlanDetail);
+    } else {
+        loadPlanDetail();
+    }
+})();
+</script>

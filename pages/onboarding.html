@@ -512,8 +512,10 @@ async function generatePlan() {
             console.log('✅ Plan agregado al array de planes. Total:', user.plans.length);
         }
 
-        // Marcar onboarding como completado
-        if (user) {
+        // Marcar onboarding como completado solo si viene del REGISTER (primer plan).
+        // Si viene de "Nuevo Plan Carrera", el usuario ya tenía onboarding completado; no sobrescribir.
+        const creatingNewPlan = sessionStorage.getItem('creatingNewPlan');
+        if (user && !creatingNewPlan) {
             await auth.markOnboardingComplete(user.id);
         }
 

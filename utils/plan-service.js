@@ -35,7 +35,7 @@ class PlanService {
                 status: 'active',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
-                is_primary: false // Se establecerá en true el primer plan
+                is_primary: false // Todos los planes iguales; no hay "plan activo" por usuario
             };
 
             const response = await this.supabase
@@ -47,11 +47,8 @@ class PlanService {
                 throw new Error(`Error saving plan: ${response.error.message}`);
             }
 
-            // Si es el primer plan del usuario, establécelo como primario
-            const existingPlans = await this.getUserPlans(userId);
-            if (!existingPlans || existingPlans.length === 1) {
-                await this.setPrimaryPlan(response.data[0].id);
-            }
+            // Regla de producto: todos los planes se tratan igual. No existe "plan activo" ni plan primario.
+            // No se establece is_primary para evitar lógica de "plan único" por usuario.
 
             return {
                 success: true,
