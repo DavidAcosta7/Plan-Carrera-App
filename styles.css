@@ -1326,15 +1326,31 @@ button {
 .new-plan-button-container {
     display: flex;
     justify-content: center;
-    padding: 2rem 0;
-    margin-top: 2rem;
+    align-items: center;
+    padding: 3rem 0 2rem 0;
+    margin-top: 3rem;
     border-top: 1px solid var(--card-border);
+    width: 100%;
 }
 
-.new-plan-button-container .btn-large {
+.new-plan-button-container .btn-primary.btn-large {
     padding: 1rem 2.5rem;
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    border-radius: var(--radius-lg);
+    min-width: 240px;
+    transition: all var(--transition-base);
+    box-shadow: var(--shadow-md);
+}
+
+.new-plan-button-container .btn-primary.btn-large:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.new-plan-button-container .btn-primary.btn-large:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-md);
 }
 
 /* Empty State mejorado */
@@ -1610,6 +1626,21 @@ button {
     }
     
     .progress-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .new-plan-button-container {
+        padding: 2rem 0 1.5rem 0;
+        margin-top: 2rem;
+    }
+    
+    .new-plan-button-container .btn-primary.btn-large {
+        min-width: 100%;
+        padding: 1rem 1.5rem;
+        font-size: var(--text-base);
+    }
+    
+    .plans-grid {
         grid-template-columns: 1fr;
     }
     
