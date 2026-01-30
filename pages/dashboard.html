@@ -10,47 +10,51 @@
 -->
 
 <div class="dashboard-page dashboard-clean">
-
-    <!-- HEADER -->
-    <header class="dashboard-header">
+    <!-- HEADER (misma estructura que index / styles dashboard-clean) -->
+    <header class="dashboard-header dashboard-header-clean">
       <div class="header-content">
-        <h1 class="dashboard-title">
-          Hola, <span id="userName">Usuario</span>
-        </h1>
-        <button class="btn-ghost" onclick="logout()">Cerrar sesión</button>
+        <div class="header-left">
+          <h1 class="dashboard-title">Hola, <span id="userName">Usuario</span></h1>
+          <p class="dashboard-subtitle">Tu plan de carrera</p>
+        </div>
+        <div class="header-right">
+          <button type="button" class="btn-secondary btn-ghost" onclick="logout()">Cerrar sesión</button>
+        </div>
       </div>
     </header>
-  
+
     <!-- MAIN -->
-    <main class="dashboard-main">
-  
+    <main class="dashboard-main dashboard-main-clean">
       <!-- LOADING -->
-      <section id="loadingState" class="state loading" hidden>
-        <div class="spinner"></div>
-        <p>Cargando tu dashboard…</p>
-      </section>
-  
-      <!-- EMPTY STATE -->
-      <section id="emptyState" class="state empty" hidden>
-        <p class="empty-title">Aún no tienes un Plan de Carrera</p>
-        <p class="empty-text">
-          Completa el onboarding para que la IA cree tu plan personalizado.
-        </p>
-      </section>
-  
+      <div class="loading-state" id="loadingState" hidden>
+        <div class="loading-content">
+          <div class="loading-spinner"></div>
+          <p>Cargando...</p>
+        </div>
+      </div>
+
       <!-- PLAN CARD -->
-      <section id="planSection" class="plan-section" hidden>
-        <div id="planCard"></div>
+      <section class="plan-card-section" id="planCardSection" style="display:none;">
+        <div id="planCardContainer"></div>
       </section>
-  
+
+      <!-- EMPTY STATE -->
+      <section class="empty-state" id="emptyState" hidden>
+        <div class="empty-content">
+          <p class="empty-message">Aún no tienes un Plan de Carrera creado.</p>
+          <p class="empty-hint">Regístrate y completa el onboarding para que la IA genere tu plan según tus opciones.</p>
+        </div>
+      </section>
+
       <!-- ERROR -->
-      <section id="errorState" class="state error" hidden>
-        <p id="errorMessage"></p>
-        <button class="btn-primary" onclick="loadDashboard()">Reintentar</button>
-      </section>
-  
+      <div class="error-state" id="errorState" hidden>
+        <div class="error-content">
+          <p id="errorMessage"></p>
+          <button type="button" class="btn-primary" onclick="loadDashboard()">Reintentar</button>
+        </div>
+      </div>
     </main>
-  </div>
+</div>
   
   <script>
   /*
@@ -109,7 +113,7 @@
   }
   
   function renderPlanCard(plan) {
-    const container = document.getElementById('planCard');
+    const container = document.getElementById('planCardContainer');
     if (!container) return;
 
     const content = typeof plan.plan_content === 'string'
@@ -120,15 +124,20 @@
     const objective = plan.objective || content.objective || '';
     const deadline = plan.estimated_duration || content.estimatedDuration || content.estimated_duration || '';
     const created = plan.created_at ? formatDate(plan.created_at) : '';
+    let what = description;
+    if (!what && content.phases && content.phases.length > 0) {
+      const t = content.phases[0].topics || content.phases[0].learning_objectives || [];
+      what = t.slice(0, 3).join(', ');
+    }
 
     container.innerHTML = `
-      <article class="plan-card" onclick="openPlan('${escapeAttr(plan.id)}')" role="button" tabindex="0">
-        <h2>${escapeHtml(title)}</h2>
-        ${description ? `<p><strong>Qué vas a estudiar:</strong><br>${escapeHtml(description)}</p>` : ''}
-        ${objective ? `<p><strong>Objetivo:</strong><br>${escapeHtml(objective)}</p>` : ''}
-        ${deadline ? `<p><strong>Plazo estimado:</strong><br>${escapeHtml(deadline)}</p>` : ''}
-        ${created ? `<p class="plan-date">Creado el ${escapeHtml(created)}</p>` : ''}
-        <span class="plan-cta">Ver plan completo →</span>
+      <article class="plan-career-card" onclick="openPlan('${escapeAttr(plan.id)}')" role="button" tabindex="0">
+        <h2 class="plan-career-card-title">${escapeHtml(title)}</h2>
+        ${what ? `<p class="plan-career-card-field"><span class="label">Qué vas a estudiar</span>${escapeHtml(what)}</p>` : ''}
+        ${objective ? `<p class="plan-career-card-field"><span class="label">Objetivo principal</span>${escapeHtml(objective)}</p>` : ''}
+        ${deadline ? `<p class="plan-career-card-field"><span class="label">Plazo estimado</span>${escapeHtml(deadline)}</p>` : ''}
+        ${created ? `<p class="plan-career-card-field plan-career-card-date"><span class="label">Fecha de creación</span>${escapeHtml(created)}</p>` : ''}
+        <p class="plan-career-card-cta">Ver detalle del plan →</p>
       </article>
     `;
   }
@@ -147,16 +156,27 @@
   ===================== */
   
   function showState(state) {
-    document.getElementById('loadingState')?.setAttribute('hidden', true);
-    document.getElementById('emptyState')?.setAttribute('hidden', true);
-    document.getElementById('planSection')?.setAttribute('hidden', true);
-    document.getElementById('errorState')?.setAttribute('hidden', true);
-  
+    const loadingEl = document.getElementById('loadingState');
+    const emptyEl = document.getElementById('emptyState');
+    const planSection = document.getElementById('planCardSection');
+    const errorEl = document.getElementById('errorState');
+
+    loadingEl?.setAttribute('hidden', '');
+    emptyEl?.setAttribute('hidden', '');
+    errorEl?.setAttribute('hidden', '');
+    if (planSection) {
+      planSection.setAttribute('hidden', '');
+      planSection.style.display = 'none';
+    }
+
     if (state === 'plan') {
-      document.getElementById('planSection')?.removeAttribute('hidden');
+      if (planSection) {
+        planSection.removeAttribute('hidden');
+        planSection.style.display = 'block';
+      }
     } else {
-      const el = state === 'loading' ? 'loadingState' : state === 'empty' ? 'emptyState' : 'errorState';
-      document.getElementById(el)?.removeAttribute('hidden');
+      const id = state === 'loading' ? 'loadingState' : state === 'empty' ? 'emptyState' : 'errorState';
+      document.getElementById(id)?.removeAttribute('hidden');
     }
   }
   

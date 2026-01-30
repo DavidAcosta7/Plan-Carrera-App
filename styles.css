@@ -1266,6 +1266,17 @@ button {
     border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.dashboard-clean .loading-state .loading-content p,
+.dashboard-clean .error-state .error-content p {
+    margin: var(--spacing-md) 0 0;
+    color: #64748b;
+    font-size: var(--text-sm);
+}
+
+.dashboard-clean .plan-card-section {
+    margin-bottom: 0;
+}
+
 .dashboard-clean .btn-cta {
     display: inline-flex;
     align-items: center;
