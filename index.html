@@ -1117,46 +1117,42 @@
         `;
 
         const dashboardContent = `
-<div class="dashboard-page">
-    <header class="dashboard-header">
+<div class="dashboard-page dashboard-clean">
+    <header class="dashboard-header dashboard-header-clean">
         <div class="header-content">
             <div class="header-left">
-                <h1 class="dashboard-title">Mi Plan de Carrera</h1>
-                <p class="dashboard-subtitle">Tu camino hacia el éxito profesional</p>
+                <h1 class="dashboard-title">Hola, <span id="userName">Usuario</span></h1>
+                <p class="dashboard-subtitle">Gestiona tu plan de carrera</p>
             </div>
             <div class="header-right">
-                <div class="user-info">
-                    <span id="userName">Usuario</span>
-                    <button class="btn-secondary" onclick="window.logout()">Cerrar Sesión</button>
-                </div>
+                <button type="button" class="btn-cta" onclick="startNewPlanOnboarding()"><span class="btn-cta-icon">+</span> Nuevo Plan Carrera</button>
+                <button type="button" class="btn-secondary btn-ghost" onclick="logout()">Cerrar sesión</button>
             </div>
         </div>
     </header>
-
-    <main class="dashboard-main">
-        <section class="progress-overview">
-            <div class="progress-cards">
-                <div class="progress-card">
-                    <div class="progress-icon">📊</div>
-                    <div class="progress-info">
-                        <h3>Progreso Total</h3>
-                        <div class="progress-percentage">0%</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
+    <main class="dashboard-main dashboard-main-clean">
+        <section class="plans-section" id="plansSection" style="display:none;"><h2 class="section-title">Mis Plan Carrera</h2><div class="plans-grid" id="plansGrid"></div></section>
+        <section class="empty-state" id="emptyState">
+            <div class="empty-content">
+                <p class="empty-message">Aún no tienes un plan de carrera.</p>
+                <p class="empty-hint">Completa el onboarding para crear tu plan según tus opciones.</p>
+                <button type="button" class="btn-cta btn-cta-empty" onclick="startNewPlanOnboarding()"><span class="btn-cta-icon">+</span> Crear mi plan</button>
             </div>
         </section>
-
-        <section class="career-plan">
-            <h2>Tu Plan Personalizado</h2>
-            <div id="phasesContainer">
-                <!-- Las fases se cargarán dinámicamente -->
-            </div>
-        </section>
+        <div class="loading-state" id="loadingState" style="display:none;"><div class="loading-content"><div class="loading-spinner"></div><p>Cargando...</p></div></div>
+        <div class="error-state" id="errorState" style="display:none;"><div class="error-content"><p id="errorMessage"></p><button type="button" class="btn-primary" onclick="loadDashboard()">Reintentar</button></div></div>
     </main>
 </div>
+<script>
+var userPlans=[];var currentPlan=null;var currentPlanId=null;
+function loadDashboard(){try{if(!auth||!auth.isAuthenticated()){router.navigate('/register');return;}var user=auth.getUser();document.getElementById('userName').textContent=user.name||user.email||'Usuario';document.getElementById('loadingState').style.display='block';document.getElementById('plansSection').style.display='none';document.getElementById('emptyState').style.display='none';document.getElementById('errorState').style.display='none';if(typeof planService!=='undefined'&&planService&&planService.getUserPlans){planService.getUserPlans(user.id).then(function(p){userPlans=p||[];finishLoadDashboard();}).catch(function(){userPlans=[];var s=localStorage.getItem('currentPlan');if(s)try{userPlans=[JSON.parse(s)];}catch(e){}finishLoadDashboard();});}else{var s=localStorage.getItem('currentPlan');if(s)try{userPlans=[JSON.parse(s)];}catch(e){}finishLoadDashboard();}}catch(e){document.getElementById('loadingState').style.display='none';document.getElementById('errorState').style.display='block';document.getElementById('errorMessage').textContent=e.message;}}
+function finishLoadDashboard(){document.getElementById('loadingState').style.display='none';if(userPlans&&userPlans.length>0){renderPlans();document.getElementById('plansSection').style.display='block';document.getElementById('emptyState').style.display='none';}else{document.getElementById('plansSection').style.display='none';document.getElementById('emptyState').style.display='block';}}
+function renderPlans(){var g=document.getElementById('plansGrid');if(!g)return;g.innerHTML=userPlans.map(function(plan){var c=plan.plan_content||plan;var t=plan.title||c.title||'Plan de carrera';var id=plan.id||'';return '<article class="plan-card-clean" onclick="selectPlan(\\''+id+'\\',this)" data-plan-id="'+id+'"><h3 class="plan-card-title">'+ (t.replace(/</g,'&lt;').replace(/>/g,'&gt;'))+'</h3><p class="plan-card-meta">Ver detalle</p></article>';}).join('');}
+function selectPlan(planId,el){currentPlanId=planId;currentPlan=userPlans.filter(function(p){return p.id===planId;})[0];if(router)router.navigate('/dashboard/plans/'+planId);}
+function startNewPlanOnboarding(){sessionStorage.setItem('creatingNewPlan','true');localStorage.removeItem('currentQuestion');localStorage.removeItem('userAnswers');if(router)router.navigate('/onboarding');}
+function logout(){try{if(auth)auth.logout();if(router)router.navigate('/');}catch(e){if(router)router.navigate('/');}}
+if(document.readyState!=='loading')loadDashboard();else document.addEventListener('DOMContentLoaded',loadDashboard);
+</script>
         `;
 
         // Definir rutas con contenido inline

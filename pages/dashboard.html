@@ -1,350 +1,177 @@
 <!--
-  Dashboard Plan Carrera - Rediseño moderno
-  Estructura: Sidebar + Header (bienvenida + CTA) + Grid de planes + Panel Actividad
-  Lógica conservada: loadDashboard, renderPlans, selectPlan, startNewPlanOnboarding
+  Dashboard Plan Carrera - Versión limpia
+  Header + área de contenido lista para mostrar la card del plan (próximo paso)
 -->
-<div class="dashboard-page dashboard-theme-light">
-    <aside class="dashboard-sidebar" aria-label="Navegación principal">
-        <div class="sidebar-brand">
-            <span class="sidebar-logo">📚</span>
-            <span class="sidebar-title">Plan Carrera</span>
-        </div>
-        <nav class="sidebar-nav">
-            <a href="#/dashboard" class="sidebar-item active" data-route="/dashboard" aria-current="page">
-                <span class="sidebar-icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M12 6v6"/></svg>
-                </span>
-                <span class="sidebar-label">Cursos</span>
-            </a>
-            <a href="#" class="sidebar-item" onclick="return false;">
-                <span class="sidebar-icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                </span>
-                <span class="sidebar-label">Participantes</span>
-            </a>
-            <a href="#" class="sidebar-item" onclick="return false;">
-                <span class="sidebar-icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                </span>
-                <span class="sidebar-label">Reportes</span>
-            </a>
-            <a href="#" class="sidebar-item" onclick="return false;">
-                <span class="sidebar-icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                </span>
-                <span class="sidebar-label">Configuración</span>
-            </a>
-        </nav>
-        <div class="sidebar-footer">
-            <button type="button" class="sidebar-item sidebar-item-logout" onclick="logout()">
-                <span class="sidebar-icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                </span>
-                <span class="sidebar-label">Cerrar sesión</span>
-            </button>
-        </div>
-    </aside>
-
-    <div class="dashboard-wrapper">
-        <!-- Header: bienvenida + CTA -->
-        <header class="dashboard-header">
-            <div class="header-content">
-                <div class="header-left">
-                    <h1 class="dashboard-title" id="dashboardTitle">Hola, <span id="userName">Usuario</span></h1>
-                    <p class="dashboard-subtitle" id="dashboardSubtitle">Gestiona tus planes de carrera</p>
-                </div>
-                <div class="header-right">
-                    <button type="button" class="btn-cta" onclick="startNewPlanOnboarding()">
-                        <span class="btn-cta-icon">+</span>
-                        Nuevo Plan Carrera
-                    </button>
-                    <button type="button" class="btn-secondary btn-ghost" onclick="logout()">Cerrar Sesión</button>
-                </div>
+<div class="dashboard-page dashboard-clean">
+    <header class="dashboard-header dashboard-header-clean">
+        <div class="header-content">
+            <div class="header-left">
+                <h1 class="dashboard-title">Hola, <span id="userName">Usuario</span></h1>
+                <p class="dashboard-subtitle">Gestiona tu plan de carrera</p>
             </div>
-        </header>
-
-        <!-- Contenido principal: grid + panel actividad -->
-        <main class="dashboard-main">
-            <div class="dashboard-content">
-                <!-- Sección: Mis Plan Carrera (grid de tarjetas) -->
-                <section class="plans-section" id="plansSection" style="display: none;">
-                    <h2 class="section-title">Mis Plan Carrera</h2>
-                    <div class="plans-grid" id="plansGrid">
-                        <!-- Los planes se cargan dinámicamente -->
-                    </div>
-                </section>
-
-                <!-- Empty State -->
-                <section class="empty-state" id="emptyState">
-                    <div class="empty-content">
-                        <div class="empty-icon-wrap">
-                            <span class="empty-icon">📚</span>
-                        </div>
-                        <h2 class="section-title">Mis Plan Carrera</h2>
-                        <h3>No tienes planes aún</h3>
-                        <p>¡Comienza tu viaje de aprendizaje!</p>
-                        <button type="button" class="btn-cta btn-cta-empty" onclick="startNewPlanOnboarding()">
-                            <span class="btn-cta-icon">+</span>
-                            Crear mi primer plan
-                        </button>
-                    </div>
-                </section>
-
-                <!-- Loading State -->
-                <div class="loading-state" id="loadingState" style="display: none;">
-                    <div class="loading-content">
-                        <div class="loading-spinner"></div>
-                        <h3>Cargando tus planes...</h3>
-                    </div>
-                </div>
-
-                <!-- Error State -->
-                <div class="error-state" id="errorState" style="display: none;">
-                    <div class="error-content">
-                        <div class="error-icon">⚠️</div>
-                        <h2>Error cargando planes</h2>
-                        <p id="errorMessage"></p>
-                        <button type="button" class="btn-primary" onclick="loadDashboard()">Reintentar</button>
-                    </div>
-                </div>
+            <div class="header-right">
+                <button type="button" class="btn-cta" onclick="startNewPlanOnboarding()">
+                    <span class="btn-cta-icon">+</span>
+                    Nuevo Plan Carrera
+                </button>
+                <button type="button" class="btn-secondary btn-ghost" onclick="logout()">Cerrar sesión</button>
             </div>
+        </div>
+    </header>
 
-            <!-- Panel de Actividad / Estadísticas -->
-            <aside class="dashboard-activity" aria-label="Actividad y estadísticas">
-                <div class="activity-card">
-                    <h3 class="activity-title">Progreso general</h3>
-                    <div class="activity-progress-ring">
-                        <svg class="progress-ring" viewBox="0 0 80 80">
-                            <circle class="progress-ring-bg" cx="40" cy="40" r="36"/>
-                            <circle class="progress-ring-fill" id="progressRingFill" cx="40" cy="40" r="36" style="stroke-dasharray: 0 226"/>
-                        </svg>
-                        <span class="progress-ring-value" id="progressRingValue">0%</span>
-                    </div>
-                    <p class="activity-meta">Planes activos</p>
-                </div>
-                <div class="activity-card">
-                    <h3 class="activity-title">Actividad reciente</h3>
-                    <ul class="activity-list" id="activityList">
-                        <li class="activity-item">
-                            <span class="activity-avatar" aria-hidden="true">Tú</span>
-                            <span class="activity-text">Bienvenido a Plan Carrera</span>
-                        </li>
-                    </ul>
-                </div>
-            </aside>
-        </main>
-    </div>
+    <main class="dashboard-main dashboard-main-clean">
+        <!-- Contenedor donde se mostrará la card del plan (cuando exista) -->
+        <section class="plans-section" id="plansSection" style="display: none;">
+            <h2 class="section-title">Mis Plan Carrera</h2>
+            <div class="plans-grid" id="plansGrid"></div>
+        </section>
 
-    <div id="chatComponent"></div>
+        <!-- Estado vacío: sin plan aún -->
+        <section class="empty-state" id="emptyState">
+            <div class="empty-content">
+                <p class="empty-message">Aún no tienes un plan de carrera.</p>
+                <p class="empty-hint">Completa el onboarding para crear tu plan según tus opciones.</p>
+                <button type="button" class="btn-cta btn-cta-empty" onclick="startNewPlanOnboarding()">
+                    <span class="btn-cta-icon">+</span>
+                    Crear mi plan
+                </button>
+            </div>
+        </section>
+
+        <!-- Loading -->
+        <div class="loading-state" id="loadingState" style="display: none;">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <p>Cargando...</p>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <div class="error-state" id="errorState" style="display: none;">
+            <div class="error-content">
+                <p id="errorMessage"></p>
+                <button type="button" class="btn-primary" onclick="loadDashboard()">Reintentar</button>
+            </div>
+        </div>
+    </main>
 </div>
 
 <script>
 /**
- * Dashboard Plan Carrera - Lógica sin cambios
- * loadDashboard, renderPlans, selectPlan, startNewPlanOnboarding, etc.
+ * Dashboard limpio - Lógica lista para mostrar la card del plan (siguiente paso)
  */
+var userPlans = [];
+var currentPlan = null;
+var currentPlanId = null;
 
-let userPlans = [];
-let currentPlan = null;
-let currentPlanId = null;
-
-async function loadDashboard() {
+function loadDashboard() {
     try {
-        if (!auth.isAuthenticated()) {
+        if (!auth || !auth.isAuthenticated()) {
             router.navigate('/register');
             return;
         }
 
-        const user = auth.getUser();
-        console.log('📊 Cargando dashboard para:', user.name);
-
-        document.getElementById('userName').textContent = user.name || 'Usuario';
+        var user = auth.getUser();
+        document.getElementById('userName').textContent = user.name || user.email || 'Usuario';
 
         document.getElementById('loadingState').style.display = 'block';
         document.getElementById('plansSection').style.display = 'none';
         document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'none';
 
-        if (planService) {
-            userPlans = await planService.getUserPlans(user.id);
-            console.log('✅ Planes cargados:', userPlans.length);
+        if (typeof planService !== 'undefined' && planService && planService.getUserPlans) {
+            planService.getUserPlans(user.id).then(function(plans) {
+                userPlans = plans || [];
+                finishLoadDashboard();
+            }).catch(function(err) {
+                console.warn('PlanService no disponible o error:', err);
+                userPlans = [];
+                var saved = localStorage.getItem('currentPlan');
+                if (saved) try { userPlans = [JSON.parse(saved)]; } catch (e) {}
+                finishLoadDashboard();
+            });
         } else {
-            console.warn('⚠️ PlanService no disponible, usando localStorage');
-            const savedPlan = localStorage.getItem('currentPlan');
-            if (savedPlan) {
-                userPlans = [JSON.parse(savedPlan)];
-            }
+            var saved = localStorage.getItem('currentPlan');
+            if (saved) try { userPlans = [JSON.parse(saved)]; } catch (e) {}
+            finishLoadDashboard();
         }
-
-        document.getElementById('loadingState').style.display = 'none';
-
-        if (userPlans && userPlans.length > 0) {
-            renderPlans();
-            document.getElementById('plansSection').style.display = 'block';
-            document.getElementById('emptyState').style.display = 'none';
-            updateActivityPanel();
-        } else {
-            document.getElementById('plansSection').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'block';
-            updateActivityPanel();
-        }
-
-        loadChatComponent();
     } catch (error) {
-        console.error('❌ Error cargando dashboard:', error);
+        console.error('Error cargando dashboard:', error);
         document.getElementById('loadingState').style.display = 'none';
         document.getElementById('errorState').style.display = 'block';
         document.getElementById('errorMessage').textContent = error.message;
     }
 }
 
-/**
- * Renderiza tarjetas de planes: portada, título, etiquetas de duración, barra de progreso
- */
-function renderPlans() {
-    const plansGrid = document.getElementById('plansGrid');
-    if (!plansGrid) return;
-
-    plansGrid.innerHTML = userPlans
-        .map((plan) => {
-            const planContent = plan.plan_content || plan;
-            const title = plan.title || planContent.title || 'Plan sin título';
-            const objective = plan.objective || planContent.objective || planContent.description || '';
-            const deadline = plan.estimated_duration || planContent.estimatedDuration || planContent.deadline || '—';
-            const createdAt = plan.created_at ? new Date(plan.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
-            const totalPhases = plan.total_phases || planContent.phases?.length || 0;
-            const progressPercent = totalPhases ? Math.min(100, Math.round((0 / totalPhases) * 100)) : 0;
-            const durationLabel = formatDurationLabel(deadline);
-
-            return `
-        <article class="plan-card" onclick="selectPlan('${plan.id}', this)" tabindex="0" role="button">
-            <div class="plan-card-cover plan-card-cover-${(plan.id || '').length % 3}">
-                <span class="plan-card-cover-icon" aria-hidden="true">📋</span>
-            </div>
-            <div class="plan-card-content">
-                <div class="plan-card-tags">
-                    <span class="plan-tag plan-tag-duration">${escapeHtml(durationLabel)}</span>
-                    ${createdAt ? `<span class="plan-tag plan-tag-date">${escapeHtml(createdAt)}</span>` : ''}
-                </div>
-                <h3 class="plan-card-title">${escapeHtml(title)}</h3>
-                ${objective ? `<p class="plan-card-objective">${escapeHtml(objective.substring(0, 80))}${objective.length > 80 ? '…' : ''}</p>` : ''}
-                <div class="plan-card-progress">
-                    <div class="plan-progress-bar">
-                        <div class="plan-progress-fill" style="width: ${progressPercent}%"></div>
-                    </div>
-                    <span class="plan-progress-label">${progressPercent}%</span>
-                </div>
-                <div class="plan-card-footer">
-                    <button type="button" class="plan-card-action" onclick="event.stopPropagation(); editPlan('${plan.id}')" title="Editar">✏️</button>
-                    <button type="button" class="plan-card-action" onclick="event.stopPropagation(); deletePlanConfirm('${plan.id}')" title="Eliminar">🗑️</button>
-                </div>
-            </div>
-        </article>
-            `;
-        })
-        .join('');
+function finishLoadDashboard() {
+    document.getElementById('loadingState').style.display = 'none';
+    if (userPlans && userPlans.length > 0) {
+        renderPlans();
+        document.getElementById('plansSection').style.display = 'block';
+        document.getElementById('emptyState').style.display = 'none';
+    } else {
+        document.getElementById('plansSection').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+    }
 }
 
-function formatDurationLabel(deadline) {
-    if (!deadline || deadline === '—') return 'Express';
-    const s = String(deadline).toLowerCase();
-    if (s.includes('mes')) return deadline;
-    if (s.includes('año') || s.includes('year') || s.includes('12')) return '1 año';
-    if (s.includes('3')) return '3 meses';
-    if (s.includes('6')) return '6 meses';
-    return deadline.length > 12 ? deadline.substring(0, 12) + '…' : deadline;
+/**
+ * Renderiza las cards de planes (en el siguiente paso se hará la card representativa del onboarding)
+ */
+function renderPlans() {
+    var grid = document.getElementById('plansGrid');
+    if (!grid) return;
+    grid.innerHTML = userPlans.map(function(plan) {
+        var content = plan.plan_content || plan;
+        var title = plan.title || content.title || 'Plan de carrera';
+        var id = plan.id || '';
+        return '<article class="plan-card-clean" onclick="selectPlan(\'' + id + '\', this)" data-plan-id="' + id + '">' +
+            '<h3 class="plan-card-title">' + escapeHtml(title) + '</h3>' +
+            '<p class="plan-card-meta">Ver detalle</p>' +
+            '</article>';
+    }).join('');
 }
 
 function escapeHtml(text) {
     if (!text) return '';
-    const div = document.createElement('div');
+    var div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-function updateActivityPanel() {
-    const count = userPlans ? userPlans.length : 0;
-    const percent = Math.min(100, count * 25);
-    const el = document.getElementById('progressRingValue');
-    const ring = document.getElementById('progressRingFill');
-    if (el) el.textContent = percent + '%';
-    if (ring) {
-        const r = 36;
-        const c = 2 * Math.PI * r;
-        ring.style.strokeDasharray = `${(percent / 100) * c} ${c}`;
-    }
-}
-
-async function selectPlan(planId, element) {
+function selectPlan(planId, el) {
     currentPlanId = planId;
-    currentPlan = userPlans.find((p) => p.id === planId);
-    document.querySelectorAll('.plan-card').forEach((card) => card.classList.remove('active'));
-    if (element) element.classList.add('active');
-    router.navigate(`/dashboard/plans/${planId}`);
+    currentPlan = userPlans.filter(function(p) { return p.id === planId; })[0];
+    if (router) router.navigate('/dashboard/plans/' + planId);
 }
 
 function startNewPlanOnboarding() {
     sessionStorage.setItem('creatingNewPlan', 'true');
     localStorage.removeItem('currentQuestion');
     localStorage.removeItem('userAnswers');
-    router.navigate('/onboarding');
+    if (router) router.navigate('/onboarding');
 }
 
-function editPlan(planId) {
-    showNotification('Funcionalidad de edición próximamente', 'info');
-}
-
-function deletePlanConfirm(planId) {
-    if (confirm('¿Estás seguro de que quieres eliminar este plan?')) {
-        deletePlan(planId);
-    }
-}
-
-async function deletePlan(planId) {
+function logout() {
     try {
-        if (planService) await planService.deletePlan(planId);
-        userPlans = userPlans.filter((p) => p.id !== planId);
-        renderPlans();
-        showNotification('Plan eliminado', 'success');
-        if (userPlans.length === 0) {
-            document.getElementById('plansSection').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'block';
-        }
-        updateActivityPanel();
-    } catch (error) {
-        console.error('Error eliminando plan:', error);
-        showNotification('Error eliminando plan', 'error');
+        if (auth) auth.logout();
+        if (router) router.navigate('/');
+    } catch (e) {
+        if (router) router.navigate('/');
     }
 }
 
-function refreshPlans() {
-    document.getElementById('loadingState').style.display = 'block';
-    loadDashboard();
-}
-
-function loadChatComponent() {
-    const chatComponent = document.getElementById('chatComponent');
-    if (chatComponent && currentPlan) {}
-}
-
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    setTimeout(() => notification.classList.add('show'), 100);
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => notification.remove(), 300);
+function showNotification(msg, type) {
+    type = type || 'info';
+    var el = document.createElement('div');
+    el.className = 'notification notification-' + type;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function() { el.classList.add('show'); }, 100);
+    setTimeout(function() {
+        el.classList.remove('show');
+        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
     }, 3000);
-}
-
-async function logout() {
-    try {
-        if (auth) await auth.logout();
-        router.navigate('/');
-    } catch (error) {
-        router.navigate('/');
-    }
 }
 
 if (document.readyState !== 'loading') {
