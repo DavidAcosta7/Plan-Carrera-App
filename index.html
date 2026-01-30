@@ -262,6 +262,26 @@
                 return null;
             }
 
+            /**
+             * Establece el usuario actual desde login con Supabase (u otra fuente).
+             * Guarda en localStorage y actualiza currentUser para que isAuthenticated() sea true.
+             */
+            setUser(userData) {
+                const user = {
+                    id: userData.id,
+                    email: userData.email,
+                    name: userData.name || userData.email,
+                    role: userData.role || 'user',
+                    has_plan: userData.has_plan || false,
+                    plans: userData.plans || [],
+                    plan: userData.plan || null,
+                    progress: userData.progress || { completedPhases: [], completedProjects: [], expandedPhases: [1] }
+                };
+                this.currentUser = user;
+                localStorage.setItem('user', JSON.stringify(user));
+                return user;
+            }
+
             logout() {
                 this.currentUser = null;
                 localStorage.removeItem('user');
@@ -752,8 +772,8 @@
                                 const userData = userResult.data[0];
                                 console.log('✅ Datos del usuario obtenidos');
 
-                                // Guardar en localStorage
-                                window.auth.login({
+                                // Guardar usuario en Auth y localStorage para que el dashboard reconozca la sesión
+                                window.auth.setUser({
                                     id: user.id,
                                     name: userData.name,
                                     email: user.email,
@@ -762,8 +782,16 @@
                                 });
                                 loginSuccess = true;
                             } else {
-                                // Usuario en Auth pero no en tabla users - crear registro
-                                console.log('⚠️ Usuario en Auth pero sin perfil. Intentando fallback localStorage...');
+                                // Usuario en Auth pero no en tabla users: crear sesión mínima para ir al dashboard
+                                console.log('⚠️ Usuario en Auth pero sin perfil. Creando sesión mínima...');
+                                window.auth.setUser({
+                                    id: user.id,
+                                    name: user.email?.split('@')[0] || 'Usuario',
+                                    email: user.email,
+                                    role: 'user',
+                                    has_plan: false
+                                });
+                                loginSuccess = true;
                             }
                         }
                     }
