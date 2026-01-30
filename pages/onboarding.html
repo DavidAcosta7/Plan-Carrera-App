@@ -485,7 +485,9 @@ async function generatePlan() {
             console.log('✅ Plan guardado en BD:', currentPlanId);
         } else {
             console.warn('⚠️ Guardando plan en localStorage');
-            localStorage.setItem('currentPlan', JSON.stringify(generatedPlan));
+            const planWithId = { ...generatedPlan, id: 'local-' + Date.now(), created_at: new Date().toISOString() };
+            currentPlanId = planWithId.id;
+            localStorage.setItem('currentPlan', JSON.stringify(planWithId));
         }
 
         // ✅ Marcar que el usuario YA TIENE PLAN + GUARDAR EN ARRAY DE PLANES

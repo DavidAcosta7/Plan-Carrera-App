@@ -63,7 +63,7 @@
 (function() {
     function getPlanIdFromHash() {
         const hash = (window.location.hash || '').replace(/^#/, '');
-        const match = hash.match(/^\/dashboard\/plans\/([^/]+)/);
+        const match = hash.match(/^\/dashboard\/plan[s]?\/([^/]+)/);
         return match ? match[1] : null;
     }
 
@@ -93,13 +93,14 @@
             if (errorEl) errorEl.style.display = 'none';
 
             let plan = null;
-            if (typeof planService !== 'undefined' && planService && planService.getPlanById) {
+            if (typeof planService !== 'undefined' && planService && planService.getPlanById && !planId.startsWith('local-')) {
                 plan = await planService.getPlanById(planId);
-            } else {
+            }
+            if (!plan) {
                 const saved = localStorage.getItem('currentPlan');
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    if (parsed.id === planId) plan = { ...parsed, plan_content: parsed };
+                    if (parsed.id === planId || planId.startsWith('local-')) plan = { ...parsed, plan_content: typeof parsed.plan_content === 'object' ? parsed.plan_content : parsed };
                 }
             }
 

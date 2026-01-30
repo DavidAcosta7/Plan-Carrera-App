@@ -1,44 +1,36 @@
 <!--
-  Dashboard Plan Carrera - Versión limpia
-  Header + área de contenido lista para mostrar la card del plan (próximo paso)
+  Dashboard Plan Carrera - Fase única
+  - Un solo plan por usuario (generado por IA en onboarding)
+  - Card dinámica con datos del plan (título, qué estudiar, objetivo, plazo, fecha)
+  - Sin botón "Nuevo Plan Carrera" en esta fase
 -->
 <div class="dashboard-page dashboard-clean">
     <header class="dashboard-header dashboard-header-clean">
         <div class="header-content">
             <div class="header-left">
                 <h1 class="dashboard-title">Hola, <span id="userName">Usuario</span></h1>
-                <p class="dashboard-subtitle">Gestiona tu plan de carrera</p>
+                <p class="dashboard-subtitle">Tu plan de carrera</p>
             </div>
             <div class="header-right">
-                <button type="button" class="btn-cta" onclick="startNewPlanOnboarding()">
-                    <span class="btn-cta-icon">+</span>
-                    Nuevo Plan Carrera
-                </button>
                 <button type="button" class="btn-secondary btn-ghost" onclick="logout()">Cerrar sesión</button>
             </div>
         </div>
     </header>
 
     <main class="dashboard-main dashboard-main-clean">
-        <!-- Contenedor donde se mostrará la card del plan (cuando exista) -->
-        <section class="plans-section" id="plansSection" style="display: none;">
-            <h2 class="section-title">Mis Plan Carrera</h2>
-            <div class="plans-grid" id="plansGrid"></div>
+        <!-- Una sola card de Plan Carrera (cuando exista) -->
+        <section class="plan-card-section" id="planCardSection" style="display: none;">
+            <div id="planCardContainer"></div>
         </section>
 
-        <!-- Estado vacío: sin plan aún -->
+        <!-- Estado vacío: sin plan creado aún -->
         <section class="empty-state" id="emptyState">
             <div class="empty-content">
-                <p class="empty-message">Aún no tienes un plan de carrera.</p>
-                <p class="empty-hint">Completa el onboarding para crear tu plan según tus opciones.</p>
-                <button type="button" class="btn-cta btn-cta-empty" onclick="startNewPlanOnboarding()">
-                    <span class="btn-cta-icon">+</span>
-                    Crear mi plan
-                </button>
+                <p class="empty-message">Aún no tienes un Plan de Carrera creado.</p>
+                <p class="empty-hint">Regístrate y completa el onboarding para que la IA genere tu plan según tus opciones.</p>
             </div>
         </section>
 
-        <!-- Loading -->
         <div class="loading-state" id="loadingState" style="display: none;">
             <div class="loading-content">
                 <div class="loading-spinner"></div>
@@ -46,7 +38,6 @@
             </div>
         </div>
 
-        <!-- Error -->
         <div class="error-state" id="errorState" style="display: none;">
             <div class="error-content">
                 <p id="errorMessage"></p>
@@ -58,10 +49,10 @@
 
 <script>
 /**
- * Dashboard limpio - Lógica lista para mostrar la card del plan (siguiente paso)
+ * Dashboard - Un solo plan por usuario.
+ * La card se construye con datos del onboarding + IA (sin hardcode).
  */
-var userPlans = [];
-var currentPlan = null;
+var userPlan = null;
 var currentPlanId = null;
 
 function loadDashboard() {
@@ -75,25 +66,37 @@ function loadDashboard() {
         document.getElementById('userName').textContent = user.name || user.email || 'Usuario';
 
         document.getElementById('loadingState').style.display = 'block';
-        document.getElementById('plansSection').style.display = 'none';
+        document.getElementById('planCardSection').style.display = 'none';
         document.getElementById('emptyState').style.display = 'none';
         document.getElementById('errorState').style.display = 'none';
 
+        function finish(plan) {
+            userPlan = plan;
+            if (userPlan && !userPlan.id) userPlan.id = 'local-' + (userPlan.created_at ? new Date(userPlan.created_at).getTime() : Date.now());
+            document.getElementById('loadingState').style.display = 'none';
+            if (userPlan) {
+                renderPlanCard();
+                document.getElementById('planCardSection').style.display = 'block';
+                document.getElementById('emptyState').style.display = 'none';
+            } else {
+                document.getElementById('planCardSection').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+            }
+        }
+
         if (typeof planService !== 'undefined' && planService && planService.getUserPlans) {
             planService.getUserPlans(user.id).then(function(plans) {
-                userPlans = plans || [];
-                finishLoadDashboard();
-            }).catch(function(err) {
-                console.warn('PlanService no disponible o error:', err);
-                userPlans = [];
+                var plan = (plans && plans.length > 0) ? plans[0] : null;
+                finish(plan);
+            }).catch(function() {
                 var saved = localStorage.getItem('currentPlan');
-                if (saved) try { userPlans = [JSON.parse(saved)]; } catch (e) {}
-                finishLoadDashboard();
+                if (saved) try { finish(JSON.parse(saved)); } catch (e) { finish(null); }
+                else finish(null);
             });
         } else {
             var saved = localStorage.getItem('currentPlan');
-            if (saved) try { userPlans = [JSON.parse(saved)]; } catch (e) {}
-            finishLoadDashboard();
+            if (saved) try { finish(JSON.parse(saved)); } catch (e) { finish(null); }
+            else finish(null);
         }
     } catch (error) {
         console.error('Error cargando dashboard:', error);
@@ -103,53 +106,63 @@ function loadDashboard() {
     }
 }
 
-function finishLoadDashboard() {
-    document.getElementById('loadingState').style.display = 'none';
-    if (userPlans && userPlans.length > 0) {
-        renderPlans();
-        document.getElementById('plansSection').style.display = 'block';
-        document.getElementById('emptyState').style.display = 'none';
-    } else {
-        document.getElementById('plansSection').style.display = 'none';
-        document.getElementById('emptyState').style.display = 'block';
+/**
+ * Construye la card con datos del plan generado por IA (título, qué estudiar, objetivo, plazo, fecha).
+ */
+function renderPlanCard() {
+    var container = document.getElementById('planCardContainer');
+    if (!container || !userPlan) return;
+
+    var content = userPlan.plan_content || userPlan;
+    if (typeof content === 'string') try { content = JSON.parse(content); } catch (e) { content = {}; }
+
+    var title = userPlan.title || content.title || 'Plan de carrera';
+    var description = userPlan.description || content.description || '';
+    var objective = userPlan.objective || content.objective || '';
+    var deadline = userPlan.estimated_duration || content.estimatedDuration || content.estimated_duration || '';
+    var createdAt = userPlan.created_at ? formatDate(userPlan.created_at) : '';
+
+    var whatToStudy = description;
+    if (!whatToStudy && content.phases && content.phases.length > 0) {
+        var topics = content.phases[0].topics || content.phases[0].learning_objectives || [];
+        whatToStudy = topics.slice(0, 3).join(', ');
     }
+
+    var planId = userPlan.id || '';
+
+    container.innerHTML =
+        '<article class="plan-career-card" onclick="goToPlanDetail(\'' + escapeAttr(planId) + '\')" role="button" tabindex="0">' +
+        '  <h2 class="plan-career-card-title">' + escapeHtml(title) + '</h2>' +
+        (whatToStudy ? '  <p class="plan-career-card-field"><span class="label">Qué vas a estudiar</span>' + escapeHtml(whatToStudy) + '</p>' : '') +
+        (objective ? '  <p class="plan-career-card-field"><span class="label">Objetivo principal</span>' + escapeHtml(objective) + '</p>' : '') +
+        (deadline ? '  <p class="plan-career-card-field"><span class="label">Plazo estimado</span>' + escapeHtml(deadline) + '</p>' : '') +
+        (createdAt ? '  <p class="plan-career-card-field plan-career-card-date"><span class="label">Fecha de creación</span>' + escapeHtml(createdAt) + '</p>' : '') +
+        '  <p class="plan-career-card-cta">Ver detalle del plan →</p>' +
+        '</article>';
 }
 
-/**
- * Renderiza las cards de planes (en el siguiente paso se hará la card representativa del onboarding)
- */
-function renderPlans() {
-    var grid = document.getElementById('plansGrid');
-    if (!grid) return;
-    grid.innerHTML = userPlans.map(function(plan) {
-        var content = plan.plan_content || plan;
-        var title = plan.title || content.title || 'Plan de carrera';
-        var id = plan.id || '';
-        return '<article class="plan-card-clean" onclick="selectPlan(\'' + id + '\', this)" data-plan-id="' + id + '">' +
-            '<h3 class="plan-card-title">' + escapeHtml(title) + '</h3>' +
-            '<p class="plan-card-meta">Ver detalle</p>' +
-            '</article>';
-    }).join('');
+function formatDate(iso) {
+    try {
+        var d = new Date(iso);
+        return d.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+    } catch (e) { return ''; }
 }
 
 function escapeHtml(text) {
-    if (!text) return '';
+    if (text == null) return '';
     var div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-function selectPlan(planId, el) {
-    currentPlanId = planId;
-    currentPlan = userPlans.filter(function(p) { return p.id === planId; })[0];
-    if (router) router.navigate('/dashboard/plans/' + planId);
+function escapeAttr(text) {
+    if (text == null) return '';
+    return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function startNewPlanOnboarding() {
-    sessionStorage.setItem('creatingNewPlan', 'true');
-    localStorage.removeItem('currentQuestion');
-    localStorage.removeItem('userAnswers');
-    if (router) router.navigate('/onboarding');
+function goToPlanDetail(planId) {
+    currentPlanId = planId;
+    if (router) router.navigate('/dashboard/plan/' + planId);
 }
 
 function logout() {
@@ -159,19 +172,6 @@ function logout() {
     } catch (e) {
         if (router) router.navigate('/');
     }
-}
-
-function showNotification(msg, type) {
-    type = type || 'info';
-    var el = document.createElement('div');
-    el.className = 'notification notification-' + type;
-    el.textContent = msg;
-    document.body.appendChild(el);
-    setTimeout(function() { el.classList.add('show'); }, 100);
-    setTimeout(function() {
-        el.classList.remove('show');
-        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
-    }, 3000);
 }
 
 if (document.readyState !== 'loading') {
