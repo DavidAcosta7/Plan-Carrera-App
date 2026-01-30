@@ -479,31 +479,8 @@
                     
                     // Verificar que aiService está configurado
                     if (!window.aiService.isConfigured) {
-                        console.warn('⚠️ Claude API no está configurada. Usando plan por defecto.');
-                        window.showNotification('⚠️ Usa un plan por defecto - configura tu API key de Claude', 'warning');
-                        const defaultPlan = {
-                            title: "Plan de Carrera Personalizado",
-                            description: "Plan adaptado a tus objetivos y nivel actual",
-                            estimatedDuration: "16-24 semanas",
-                            phases: [
-                                {
-                                    id: 1,
-                                    title: "FASE 1: Fundamentos",
-                                    duration: "4-6 semanas",
-                                    icon: "database",
-                                    color: "bg-blue-500",
-                                    items: ["Fundamentos", "Lógica", "Estructuras"],
-                                    projects: [],
-                                    courses: ["Curso básico"],
-                                    practice: "Ejercicios diarios"
-                                }
-                            ]
-                        };
-                        window.auth.updatePlan(defaultPlan);
-                        window.showNotification('✅ Plan generado (versión por defecto)', 'success');
-                        setTimeout(() => {
-                            window.router.navigate('/dashboard');
-                        }, 1500);
+                        console.warn('⚠️ Claude API no está configurada.');
+                        window.showNotification('Configura la API key de Claude para generar tu plan. Sin IA no se crea plan.', 'error');
                         return;
                     }
                     
@@ -529,33 +506,8 @@
             }
         };
 
-        window.initDashboard = function() {
-            if (!window.auth) {
-                console.error('❌ auth no está definido');
-                return;
-            }
-            
-            const user = window.auth.getUser();
-            if (!user || !user.plan) return;
-
-            const userNameEl = document.getElementById('userName');
-            if (userNameEl) userNameEl.textContent = user.name;
-            
-            const container = document.getElementById('phasesContainer');
-            if (container && user.plan.phases) {
-                container.innerHTML = user.plan.phases.map(function(phase) {
-                    return '<div class="phase-card">' +
-                        '<h3>' + phase.title + '</h3>' +
-                        '<p>' + phase.duration + '</p>' +
-                        '<div class="phase-items">' +
-                            phase.items.map(function(item) {
-                                return '<li>' + item + '</li>';
-                            }).join('') +
-                        '</div>' +
-                    '</div>';
-                }).join('');
-            }
-        };
+        // initDashboard eliminado: el dashboard usa loadDashboard + una card (sin fases hardcodeadas).
+        // La vista limpia no tiene phasesContainer; el plan se muestra en planCardContainer.
 
         window.logout = function() {
             window.auth.logout();
