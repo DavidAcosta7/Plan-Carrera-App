@@ -123,22 +123,14 @@
                         return;
                     }
 
-                    // Dashboard: cargar desde pages/dashboard.html (Mis Plan Carrera + Nuevo Plan Carrera)
+                    // Dashboard: siempre usar contenido limpio (header + card o estado vacío)
                     if (hash === '/dashboard') {
-                        try {
-                            const res = await fetch('./pages/dashboard.html');
-                            const content = await res.text();
-                            this.currentRoute = content;
-                            this.render(content);
-                            setTimeout(() => {
-                                if (window.loadDashboard) window.loadDashboard();
-                            }, 100);
-                        } catch (e) {
-                            console.error('Error cargando dashboard:', e);
-                            const fallback = this.routes['/dashboard'] || this.routes['/'];
-                            this.render(fallback || '<p>Error cargando dashboard. <a href="#/">Ir al inicio</a></p>');
-                            setTimeout(() => { if (window.loadDashboard) window.loadDashboard(); }, 100);
-                        }
+                        const content = this.routes['/dashboard'] || this.routes['/'];
+                        this.currentRoute = content;
+                        this.render(content);
+                        setTimeout(() => {
+                            if (window.loadDashboard) window.loadDashboard();
+                        }, 100);
                         return;
                     }
 
@@ -1162,7 +1154,7 @@
 </div>
 <script>
 var userPlan=null;var currentPlanId=null;
-function loadDashboard(){try{if(!auth||!auth.isAuthenticated()){router.navigate('/register');return;}var user=auth.getUser();document.getElementById('userName').textContent=user.name||user.email||'Usuario';document.getElementById('loadingState').style.display='block';document.getElementById('planCardSection').style.display='none';document.getElementById('emptyState').style.display='none';document.getElementById('errorState').style.display='none';function finish(plan){userPlan=plan;document.getElementById('loadingState').style.display='none';if(userPlan){renderPlanCard();document.getElementById('planCardSection').style.display='block';document.getElementById('emptyState').style.display='none';}else{document.getElementById('planCardSection').style.display='none';document.getElementById('emptyState').style.display='block';}}if(typeof planService!=='undefined'&&planService&&planService.getUserPlans){planService.getUserPlans(user.id).then(function(plans){var p=(plans&&plans.length>0)?plans[0]:null;finish(p);}).catch(function(){var s=localStorage.getItem('currentPlan');if(s)try{finish(JSON.parse(s));}catch(e){finish(null);}else finish(null);});}else{var s=localStorage.getItem('currentPlan');if(s)try{finish(JSON.parse(s));}catch(e){finish(null);}else finish(null);}}catch(e){document.getElementById('loadingState').style.display='none';document.getElementById('errorState').style.display='block';document.getElementById('errorMessage').textContent=e.message;}}
+function loadDashboard(){try{if(!auth||!auth.isAuthenticated()){router.navigate('/register');return;}var user=auth.getUser();document.getElementById('userName').textContent=user.name||user.email||'Usuario';document.getElementById('loadingState').style.display='block';document.getElementById('planCardSection').style.display='none';document.getElementById('emptyState').style.display='none';document.getElementById('errorState').style.display='none';function finish(plan){userPlan=plan;if(userPlan&&!userPlan.id)userPlan.id='local-'+(userPlan.created_at?new Date(userPlan.created_at).getTime():Date.now());document.getElementById('loadingState').style.display='none';if(userPlan){renderPlanCard();document.getElementById('planCardSection').style.display='block';document.getElementById('emptyState').style.display='none';}else{document.getElementById('planCardSection').style.display='none';document.getElementById('emptyState').style.display='block';}}if(typeof planService!=='undefined'&&planService&&planService.getUserPlans){planService.getUserPlans(user.id).then(function(plans){var p=(plans&&plans.length>0)?plans[0]:null;finish(p);}).catch(function(){var s=localStorage.getItem('currentPlan');if(s)try{finish(JSON.parse(s));}catch(e){finish(null);}else finish(null);});}else{var s=localStorage.getItem('currentPlan');if(s)try{finish(JSON.parse(s));}catch(e){finish(null);}else finish(null);}}catch(e){document.getElementById('loadingState').style.display='none';document.getElementById('errorState').style.display='block';document.getElementById('errorMessage').textContent=e.message;}}
 function renderPlanCard(){var c=document.getElementById('planCardContainer');if(!c||!userPlan)return;var d=userPlan.plan_content||userPlan;if(typeof d==='string')try{d=JSON.parse(d);}catch(e){d={};}var title=userPlan.title||d.title||'Plan de carrera';var desc=userPlan.description||d.description||'';var obj=userPlan.objective||d.objective||'';var dl=userPlan.estimated_duration||d.estimatedDuration||d.estimated_duration||'';var created=userPlan.created_at?function(iso){try{return new Date(iso).toLocaleDateString('es-ES',{year:'numeric',month:'long',day:'numeric'});}catch(e){return'';}}(userPlan.created_at):'';var what=desc;if(!what&&d.phases&&d.phases.length>0){var t=d.phases[0].topics||d.phases[0].learning_objectives||[];what=t.slice(0,3).join(', ');}var id=userPlan.id||'';function esc(t){if(t==null)return'';var x=document.createElement('div');x.textContent=t;return x.innerHTML;}function escA(t){if(t==null)return'';return String(t).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}c.innerHTML='<article class="plan-career-card" onclick="goToPlanDetail(\\''+escA(id)+'\\')" role="button" tabindex="0"><h2 class="plan-career-card-title">'+esc(title)+'</h2>'+(what?'<p class="plan-career-card-field"><span class="label">Qué vas a estudiar</span>'+esc(what)+'</p>':'')+(obj?'<p class="plan-career-card-field"><span class="label">Objetivo principal</span>'+esc(obj)+'</p>':'')+(dl?'<p class="plan-career-card-field"><span class="label">Plazo estimado</span>'+esc(dl)+'</p>':'')+(created?'<p class="plan-career-card-field plan-career-card-date"><span class="label">Fecha de creación</span>'+esc(created)+'</p>':'')+'<p class="plan-career-card-cta">Ver detalle del plan →</p></article>';}
 function goToPlanDetail(planId){currentPlanId=planId;if(router)router.navigate('/dashboard/plan/'+planId);}
 function logout(){try{if(auth)auth.logout();if(router)router.navigate('/');}catch(e){if(router)router.navigate('/');}}
