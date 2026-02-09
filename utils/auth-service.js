@@ -145,15 +145,10 @@ class AuthService {
             if (!this.supabase || !this.supabase.isConfigured) {
                 return !localStorage.getItem('hasPlans_' + userId);
             }
-
-            // Verificar si el usuario tiene planes en la BD
-            const response = await this.supabase
-                .from('career_plans')
-                .select('id', { count: 'exact' })
-                .eq('user_id', userId)
-                .eq('status', 'active');
-
-            return (response.count || 0) === 0;
+            const response = await this.supabase.get('career_plans', { where: { user_id: userId }, select: 'id', limit: 1 });
+            if (!response.success) return true;
+            const count = Array.isArray(response.data) ? response.data.length : (response.count || 0);
+            return count === 0;
         } catch (error) {
             console.error('Error en checkIsFirstTime:', error);
             return true; // Por defecto, asumir que es primera vez
@@ -186,7 +181,7 @@ class AuthService {
     async logout() {
         try {
             if (this.supabase && this.supabase.isConfigured) {
-                await this.supabase.signOut();
+                this.supabase.logout();
             }
 
             this.currentUser = null;
@@ -252,7 +247,7 @@ class AuthService {
     async loadCurrentUser() {
         try {
             if (this.supabase && this.supabase.isConfigured) {
-                const user = await this.supabase.getCurrentUser();
+                const user = this.supabase.getCurrentUser();
                 if (user) {
                     this.currentUser = {
                         id: user.id,

@@ -8,7 +8,15 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Plan Carrera Pro - Crea tu Plan de Carrera con IA</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/landing.css">
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="css/register.css">
+    <link rel="stylesheet" href="css/onboarding.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/projects.css">
+    <link rel="stylesheet" href="css/plan-detail.css">
+    <link rel="stylesheet" href="css/carrerbot.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,21 +28,23 @@
             url: 'https://illzdmhlkhnooykecqkv.supabase.co',
             anonKey: 'sb_publishable_VeO6VB6HFb75x0Nk5_6roQ_Wbt_oxPI'
         };
-        
+        // Backend API (Groq AI) - chatbot del dashboard
+        window.API_BASE_URL = window.API_BASE_URL || 'http://127.0.0.1:8000';
         console.log('📝 Variables de Supabase inyectadas en window.SUPABASE_CONFIG');
     </script>
     
     <!-- Supabase Client -->
     <script src="utils/supabase-client.js"></script>
     
-    <!-- AI Service (Claude Integration) -->
-    <script src="utils/ai-service.js"></script>
+    <!-- IA: núcleo Groq en backend (sin Claude en frontend) -->
     
     <!-- Plan Service (Database Management) -->
     <script src="utils/plan-service.js"></script>
     
     <!-- Auth Service (Mejorado) -->
     <script src="utils/auth-service.js"></script>
+    <!-- Chatbot Sidebar (Dashboard) -->
+    <script src="utils/chatbot-sidebar.js"></script>
 </head>
 <body>
     <!-- Pantalla de carga FUERA de #app para que no se destruya al renderizar -->
@@ -83,19 +93,22 @@
                 const loadingEl = document.getElementById('loadingScreen');
                 try {
                     const hash = (window.location.hash || '#/').replace(/^#/, '') || '/';
+                    const isFileProtocol = window.location.protocol === 'file:';
 
                     // Ruta dinámica: vista detalle de plan /dashboard/plan/[planId]
                     if (hash.startsWith('/dashboard/plan/')) {
                         const planId = hash.replace(/^\/dashboard\/plan\//, '').split('/')[0];
                         if (planId) {
                             try {
-                                const res = await fetch('./pages/plan-detail.html');
-                                const content = await res.text();
-                                this.currentRoute = content;
-                                this.render(content);
-                                setTimeout(() => {
-                                    if (window.loadPlanDetail) window.loadPlanDetail();
-                                }, 100);
+                                if (!isFileProtocol) {
+                                    const res = await fetch('./pages/plan-detail.html');
+                                    const content = await res.text();
+                                    this.currentRoute = content;
+                                    this.render(content);
+                                    setTimeout(() => { if (window.loadPlanDetail) window.loadPlanDetail(); }, 100);
+                                } else {
+                                    this.container.innerHTML = '<p>No disponible en modo archivo. Abre con http o usa la vista inline.</p>';
+                                }
                             } catch (e) {
                                 console.error('Error cargando vista de plan:', e);
                                 this.container.innerHTML = '<div class="error">Error cargando el plan. <a href="#/dashboard" data-route="/dashboard">Volver al Dashboard</a></div>';
@@ -123,53 +136,137 @@
                         return;
                     }
 
-                    // Dashboard: siempre usar contenido limpio (header + card o estado vacío)
+                    // Dashboard: cargar desde archivo dedicado
                     if (hash === '/dashboard') {
-                        const content = this.routes['/dashboard'] || this.routes['/'];
-                        this.currentRoute = content;
-                        this.render(content);
-                        setTimeout(() => {
-                            if (window.loadDashboard) window.loadDashboard();
-                        }, 100);
+                        try {
+                            if (!isFileProtocol) {
+                                const res = await fetch('./pages/dashboard.html');
+                                const content = await res.text();
+                                this.currentRoute = content;
+                                this.render(content);
+                            } else {
+                                const content = this.routes['/dashboard'] || this.routes['/'];
+                                this.currentRoute = content;
+                                this.render(content);
+                            }
+                            setTimeout(() => {
+                                if (window.loadDashboard) window.loadDashboard();
+                                if (window.initChatbotSidebar) window.initChatbotSidebar();
+                            }, 100);
+                        } catch (e) {
+                            console.error('Error cargando dashboard:', e);
+                            this.container.innerHTML = '<div class="error">Error cargando dashboard. <a href="#/" data-route="/">Volver</a></div>';
+                        }
                         return;
                     }
 
-                    // Onboarding: cargar desde pages/onboarding.html (mismo flujo de preguntas)
+                    // Onboarding: cargar desde archivo dedicado como las otras páginas
                     if (hash === '/onboarding') {
                         try {
-                            const res = await fetch('./pages/onboarding.html');
-                            const content = await res.text();
+                            if (!isFileProtocol) {
+                                const res = await fetch('./pages/onboarding.html');
+                                const content = await res.text();
+                                this.currentRoute = content;
+                                this.render(content);
+                                setTimeout(() => {
+                                    if (window.initOnboarding) window.initOnboarding();
+                                }, 100);
+                            } else {
+                                // Para file://, usar contenido inline como fallback
+                                const content = this.routes['/onboarding'] || onboardingContent || '';
+                                this.currentRoute = content;
+                                this.render(content);
+                                setTimeout(() => {
+                                    if (window.initOnboarding) window.initOnboarding();
+                                }, 100);
+                            }
+                        } catch (e) {
+                            console.error('Error cargando onboarding:', e);
+                            // Fallback a contenido inline
+                            const content = this.routes['/onboarding'] || onboardingContent || '';
                             this.currentRoute = content;
                             this.render(content);
                             setTimeout(() => {
                                 if (window.initOnboarding) window.initOnboarding();
                             }, 100);
-                        } catch (e) {
-                            console.error('Error cargando onboarding:', e);
-                            const fallback = this.routes['/onboarding'];
-                            this.render(fallback || '<p>Error cargando onboarding.</p>');
-                            setTimeout(() => { if (window.initOnboarding) window.initOnboarding(); }, 100);
                         }
                         return;
                     }
 
-                    // Rutas estáticas: landing, login, register
-                    const content = this.routes[hash] || this.routes['/'];
-                    if (content) {
-                        this.currentRoute = content;
-                        this.render(content);
-                        setTimeout(() => {
-                            if (hash === '/register' && window.initRegisterForm) window.initRegisterForm();
-                            if (hash === '/login' && window.initLoginForm) window.initLoginForm();
-                        }, 100);
-                    } else {
-                        if (typeof landingContent !== 'undefined') {
-                            this.currentRoute = landingContent;
-                            this.render(landingContent);
-                        } else {
-                            if (loadingEl) loadingEl.style.display = 'none';
-                            this.container.innerHTML = '<p>Ruta no encontrada. <a href="#/">Ir al inicio</a></p>';
+                    // Projects: cargar desde archivo dedicado
+                    if (hash === '/projects') {
+                        try {
+                            const res = await fetch('./pages/projects.html');
+                            const content = await res.text();
+                            this.currentRoute = content;
+                            this.render(content);
+                            setTimeout(() => {
+                                if (window.initProjectsPage) window.initProjectsPage();
+                            }, 100);
+                        } catch (e) {
+                            console.error('Error cargando projects:', e);
+                            this.container.innerHTML = '<div class="error">Error cargando projects. <a href="#/" data-route="/">Volver</a></div>';
                         }
+                        return;
+                    }
+
+                    // Rutas estáticas: landing, login, register (cargar desde pages/ o inline según protocolo)
+                    if (hash === '/' || hash === '') {
+                        try {
+                            if (!isFileProtocol) {
+                                const res = await fetch('./pages/landing.html');
+                                const content = await res.text();
+                                this.currentRoute = content;
+                                this.render(content);
+                            } else {
+                                const content = this.routes['/'] || (typeof landingContent !== 'undefined' ? landingContent : '');
+                                this.currentRoute = content;
+                                this.render(content);
+                            }
+                            setTimeout(() => { if (window.loadCarrerBot) window.loadCarrerBot(); }, 50);
+                        } catch (e) {
+                            console.error('Error cargando landing:', e);
+                            this.container.innerHTML = '<p>Error cargando landing. <a href="#/">Recargar</a></p>';
+                        }
+                        return;
+                    }
+                    if (hash === '/login') {
+                        try {
+                            if (!isFileProtocol) {
+                                const res = await fetch('./pages/login.html');
+                                const content = await res.text();
+                                this.currentRoute = content;
+                                this.render(content);
+                            } else {
+                                const content = this.routes['/login'] || '';
+                                this.currentRoute = content;
+                                this.render(content);
+                            }
+                            setTimeout(() => { if (window.initLoginForm) window.initLoginForm(); }, 100);
+                        } catch (e) {
+                            console.error('Error cargando login:', e);
+                            this.container.innerHTML = '<p>Error cargando login. <a href="#/">Volver</a></p>';
+                        }
+                        return;
+                    }
+                    if (hash === '/register') {
+                        try {
+                            if (!isFileProtocol) {
+                                const res = await fetch('./pages/register.html');
+                                const content = await res.text();
+                                this.currentRoute = content;
+                                this.render(content);
+                            } else {
+                                const content = this.routes['/register'] || '';
+                                this.currentRoute = content;
+                                this.render(content);
+                            }
+                            setTimeout(() => { if (window.initRegisterForm) window.initRegisterForm(); }, 100);
+                        } catch (e) {
+                            console.error('Error cargando register:', e);
+                            this.container.innerHTML = '<p>Error cargando registro. <a href="#/">Volver</a></p>';
+                        }
+                        return;
                     }
                 } catch (error) {
                     console.error('Error en handleRoute:', error);
@@ -225,147 +322,16 @@
             }
         }
 
-        // Sistema de Autenticación Local
-        class Auth {
-            constructor() {
-                this.currentUser = null;
-                this.init();
-            }
-
-            init() {
-                const userData = localStorage.getItem('user');
-                if (userData) {
-                    this.currentUser = JSON.parse(userData);
-                }
-            }
-
-            register(userData) {
-                const user = {
-                    id: userData.id || Date.now().toString(),
-                    email: userData.email,
-                    name: userData.name,
-                    password: this.hashPassword(userData.password),
-                    createdAt: new Date().toISOString(),
-                    has_plan: false,
-                    plans: [],  // 🆕 Soporte para múltiples planes
-                    plan: null,
-                    progress: {
-                        completedPhases: [],
-                        completedProjects: [],
-                        expandedPhases: [1]
-                    }
-                };
-
-                localStorage.setItem('user', JSON.stringify(user));
-                this.currentUser = user;
-                return user;
-            }
-
-            login(email, password) {
-                const userData = localStorage.getItem('user');
-                if (!userData) return null;
-
-                const user = JSON.parse(userData);
-                if (user.email === email && this.verifyPassword(password, user.password)) {
-                    this.currentUser = user;
-                    return user;
-                }
-                return null;
-            }
-
-            /**
-             * Establece el usuario actual desde login con Supabase (u otra fuente).
-             * Guarda en localStorage y actualiza currentUser para que isAuthenticated() sea true.
-             */
-            setUser(userData) {
-                const user = {
-                    id: userData.id,
-                    email: userData.email,
-                    name: userData.name || userData.email,
-                    role: userData.role || 'user',
-                    has_plan: userData.has_plan || false,
-                    plans: userData.plans || [],
-                    plan: userData.plan || null,
-                    progress: userData.progress || { completedPhases: [], completedProjects: [], expandedPhases: [1] }
-                };
-                this.currentUser = user;
-                localStorage.setItem('user', JSON.stringify(user));
-                return user;
-            }
-
-            logout() {
-                this.currentUser = null;
-                localStorage.removeItem('user');
-            }
-
-            updatePlan(plan) {
-                if (!this.currentUser) return false;
-                
-                this.currentUser.has_plan = true;
-                this.currentUser.plan = plan;
-                localStorage.setItem('user', JSON.stringify(this.currentUser));
-                return true;
-            }
-
-            updateProgress(progress) {
-                if (!this.currentUser) return false;
-                
-                this.currentUser.progress = { ...this.currentUser.progress, ...progress };
-                localStorage.setItem('user', JSON.stringify(this.currentUser));
-                return true;
-            }
-
-            getUser() {
-                return this.currentUser;
-            }
-
-            getCurrentUser() {
-                return this.currentUser;
-            }
-
-            isAuthenticated() {
-                return this.currentUser !== null;
-            }
-
-            hasPlan() {
-                return this.currentUser && this.currentUser.has_plan;
-            }
-
-            hashPassword(password) {
-                return btoa(password + 'salt');
-            }
-
-            verifyPassword(password, hash) {
-                return this.hashPassword(password) === hash;
-            }
-        }
-
-        // Crear instancias globales
+        // Autenticación: usar AuthService (Supabase), sin autenticación local
         const router = new Router();
-        const auth = new Auth();
-
+        const auth = new AuthService(window.supabase);
+        window.planService = new PlanService(window.supabase);
+        
         // Hacer disponibles globalmente
         window.router = router;
         window.auth = auth;
         
-        // Esperar a que AIService se cargue desde ai-service.js
-        // Se asignará a window.aiService cuando esté disponible
-        let aiServiceReady = false;
-        const checkAIService = setInterval(() => {
-            if (typeof AIService !== 'undefined' && !aiServiceReady) {
-                window.aiService = new AIService();
-                aiServiceReady = true;
-                console.log('✅ AIService inicializado y disponible globalmente');
-                clearInterval(checkAIService);
-            }
-        }, 100);
-        
-        // Si no se carga en 5 segundos, registrar error
-        setTimeout(() => {
-            if (!aiServiceReady) {
-                console.error('⚠️ AIService no se cargó después de 5 segundos');
-            }
-        }, 5000);
+        // IA: sin inicialización de AIService (Claude). El núcleo es Groq en backend.
 
         // Iconos SVG globales
         window.icons = {
@@ -439,72 +405,26 @@
             if (el) el.scrollIntoView({ behavior: 'smooth' });
         };
 
-        window.generatePlan = async function() {
-            // Esperar a que aiService esté listo
-            if (!window.aiService) {
-                // Si aún no está listo, esperar
-                let attempts = 0;
-                return new Promise((resolve) => {
-                    const waitForAI = setInterval(() => {
-                        attempts++;
-                        if (window.aiService || attempts > 50) {
-                            clearInterval(waitForAI);
-                            if (!window.aiService) {
-                                console.error('❌ AIService no disponible');
-                                window.showNotification('Error: Servicio de IA no disponible', 'error');
-                                resolve();
-                                return;
-                            }
-                            generateWithAI();
-                        }
-                    }, 100);
-                });
-            } else {
-                generateWithAI();
+        // Cargar CarrerBot en landing (se ejecuta después del render)
+        window.loadCarrerBot = function(){
+            const mount = document.getElementById('carrerbotMount');
+            if (!mount) return;
+            const isFileProtocol = window.location.protocol === 'file:';
+            if (isFileProtocol) {
+                mount.innerHTML = '<div class="carrerbot-hero"><img src="carrerbot/carrerbotdashboard.png" alt="CarrerBot" class="carrerbot-hero-img"></div>';
+                mount.classList.add('carrerbot--greet');
+                return;
             }
-            
-            async function generateWithAI() {
-                // Obtener respuestas del formulario
-                const responses = {
-                    level: document.getElementById('level')?.value || 'beginner',
-                    interests: (document.getElementById('interests')?.value || 'python').split(',').map(i => i.trim()),
-                    timePerDay: document.getElementById('time')?.value || '2',
-                    goal: 'career-growth',
-                    deadline: '6',
-                    experience: ''
-                };
-
-                try {
-                    console.log('🚀 Generando plan con AIService...');
-                    
-                    // Verificar que aiService está configurado
-                    if (!window.aiService.isConfigured) {
-                        console.warn('⚠️ Claude API no está configurada.');
-                        window.showNotification('Configura la API key de Claude para generar tu plan. Sin IA no se crea plan.', 'error');
-                        return;
-                    }
-                    
-                    // Llamar a AIService
-                    const result = await window.aiService.generateCareerPlan(responses);
-                    
-                    if (!result.success) {
-                        console.error('❌ Error en respuesta de AIService:', result);
-                        window.showNotification('Error generando el plan', 'error');
-                        return;
-                    }
-                    
-                    console.log('✅ Plan generado exitosamente');
-                    window.auth.updatePlan(result.plan);
-                    window.showNotification('¡Plan generado exitosamente!', 'success');
-                    setTimeout(() => {
-                        window.router.navigate('/dashboard');
-                    }, 1500);
-                } catch (error) {
-                    console.error('❌ Error generando plan:', error);
-                    window.showNotification('Error: ' + error.message, 'error');
-                }
-            }
+            fetch('components/carrerbot.html')
+                .then(r => r.text())
+                .then(html => {
+                    mount.innerHTML = html;
+                    mount.classList.add('carrerbot--greet');
+                })
+                .catch(() => console.warn('No se pudo cargar CarrerBot'));
         };
+
+        // generatePlan eliminado: la generación ocurre en onboarding vía backend Groq.
 
         // initDashboard eliminado: el dashboard usa loadDashboard + una card (sin fases hardcodeadas).
         // La vista limpia no tiene phasesContainer; el plan se muestra en planCardContainer.
@@ -660,7 +580,7 @@
                     }
                     
                     // Guardar usuario en localStorage también (para modo offline)
-                    window.auth.register({ name, email, password, id: userId });
+                    await window.auth.loadCurrentUser();
                     
                     // Marcar que viene desde REGISTER (para validar en onboarding)
                     sessionStorage.setItem('fromRegister', 'true');
@@ -724,60 +644,16 @@
                         const authResult = await window.supabase.signIn(email, password);
                         
                         if (authResult.success) {
-                            const user = authResult.user;
-                            console.log('✅ Sesión iniciada con usuario:', user.id);
-
-                            // Obtener datos del usuario desde tabla users
-                            console.log('📥 Obteniendo datos del usuario...');
-                            const userResult = await window.supabase.get('users', { id: 'eq.' + user.id });
-                            
-                            if (userResult.success && userResult.data && userResult.data.length > 0) {
-                                const userData = userResult.data[0];
-                                console.log('✅ Datos del usuario obtenidos');
-
-                                // Guardar usuario en Auth y localStorage para que el dashboard reconozca la sesión
-                                window.auth.setUser({
-                                    id: user.id,
-                                    name: userData.name,
-                                    email: user.email,
-                                    role: userData.role,
-                                    has_plan: userData.has_plan
-                                });
-                                loginSuccess = true;
-                            } else {
-                                // Usuario en Auth pero no en tabla users: crear sesión mínima para ir al dashboard
-                                console.log('⚠️ Usuario en Auth pero sin perfil. Creando sesión mínima...');
-                                window.auth.setUser({
-                                    id: user.id,
-                                    name: user.email?.split('@')[0] || 'Usuario',
-                                    email: user.email,
-                                    role: 'user',
-                                    has_plan: false
-                                });
-                                loginSuccess = true;
-                            }
-                        }
-                    }
-                    
-                    // Si Supabase falló o no está configurado, intentar con localStorage
-                    if (!loginSuccess) {
-                        console.log('📝 Intentando login con localStorage (fallback)...');
-                        const user = window.auth.login(email, password);
-                        if (user) {
-                            console.log('✅ Login exitoso con localStorage');
                             loginSuccess = true;
                         }
                     }
                     
                     if (loginSuccess) {
+                        await window.auth.loadCurrentUser();
                         console.log('✅ Sesión completada exitosamente');
                         window.showNotification('¡Bienvenido!', 'success');
                         
-                        // 🔑 LIMPIAR BANDERAS DE ONBOARDING
-                        sessionStorage.removeItem('fromRegister');
-                        sessionStorage.removeItem('creatingNewPlan');
-                        
-                        // 👉 LOGIN SIEMPRE VA A DASHBOARD (NUNCA A ONBOARDING)
+                        // � LOGIN VA DIRECTO A DASHBOARD
                         setTimeout(() => {
                             window.router.navigate('/dashboard');
                         }, 1500);
@@ -799,59 +675,47 @@
         // Contenido de las páginas (inline para evitar CORS)
         const landingContent = `
 <div class="landing-page">
-    <!-- Navigation Bar -->
-    <nav class="navbar">
-        <div class="navbar-container">
-            <div class="navbar-logo">
-                <h3>Plan Carrera Pro</h3>
+    <div class="landing-header-bubble">
+        <nav class="navbar">
+            <div class="navbar-container">
+                <div class="navbar-logo">
+                    <h3>Plan Carrera Pro</h3>
+                </div>
+                <div class="navbar-buttons">
+                    <button class="btn-outline" data-route="/login">
+                        Iniciar Sesión
+                    </button>
+                    <button class="btn-primary" data-route="/register">
+                        Registrarse
+                    </button>
+                </div>
             </div>
-            <div class="navbar-buttons">
-                <button class="btn-outline" data-route="/login">
-                    Iniciar Sesión
-                </button>
-                <button class="btn-primary" data-route="/register">
-                    Registrarse
-                </button>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-content">
-            <h1 class="hero-title">
-                Crea tu <span class="gradient-text">Plan de Carrera</span> con IA
-            </h1>
-            <p class="hero-subtitle">
-                Transforma tu futuro profesional con un plan personalizado generado por Claude AI. 
-                Aprende las habilidades que el mercado realmente necesita.
-            </p>
-            <div class="hero-cta">
-                <button class="btn-primary" data-route="/register">
-                    Comenzar Gratis
-                </button>
-                <button class="btn-secondary" onclick="window.scrollToFeatures()">
-                    Ver Características
-                </button>
-            </div>
-        </div>
-        <div class="hero-visual">
-            <div class="floating-card">
-                <div class="card-header">
-                    <div class="dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+        </nav>
+        <section class="hero">
+            <div class="landing-hero-grid">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        Crea tu <span class="gradient-text">Plan de Carrera</span> con IA
+                    </h1>
+                    <p class="hero-subtitle">
+                        Transforma tu futuro profesional con un plan personalizado generado por Groq AI.
+                        Aprende las habilidades que el mercado realmente necesita.
+                    </p>
+                    <div class="hero-cta">
+                        <button class="btn-primary" data-route="/register">
+                            Registrarse
+                        </button>
+                        <button class="btn-secondary" onclick="window.scrollToFeatures()">
+                            Ver Características
+                        </button>
                     </div>
                 </div>
-                <div class="card-content">
-                    <div class="code-line"></div>
-                    <div class="code-line"></div>
-                    <div class="code-line"></div>
+                <div class="hero-visual">
+                    <div id="carrerbotMount" class="carrerbot-container carrerbot--hero"></div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+    </div>
 
     <!-- Features Section -->
     <section class="features" id="features">
@@ -861,7 +725,7 @@
                 <div class="feature-card">
                     <div class="feature-icon">🤖</div>
                     <h3>Chat IA Integrado</h3>
-                    <p>Chatea con Claude AI para resolver dudas, recibir consejos y personalizar tu aprendizaje.</p>
+                    <p>Chatea con Groq AI para resolver dudas, recibir consejos y personalizar tu aprendizaje.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
@@ -887,7 +751,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2024 Plan Carrera Pro. Todos los derechos reservados.</p>
+                <p>&copy; 2026 Plan Carrera Pro. Todos los derechos reservados.</p>
             </div>
         </div>
     </footer>
@@ -896,221 +760,591 @@
 
         const registerContent = `
 <div class="register-page">
-    <div class="register-container">
-        <div class="register-card">
-            <div class="register-header">
-                <h1>Crear Cuenta</h1>
-                <p>Únete a miles de profesionales aprendiendo con IA</p>
-            </div>
-
-            <form class="register-form" id="registerForm">
-                <div class="form-group">
-                    <label for="name">Nombre Completo</label>
-                    <input type="text" id="name" name="name" required placeholder="Juan Pérez">
-                </div>
-
-                <div class="form-group">
-                    <label for="email">Correo Electrónico</label>
-                    <input type="email" id="email" name="email" required placeholder="juan@ejemplo.com">
-                </div>
-
-                <div class="form-group">
-                    <label for="password">Contraseña</label>
-                    <input type="password" id="password" name="password" required placeholder="Mínimo 6 caracteres">
-                </div>
-
-                <div class="form-group">
-                    <label for="confirmPassword">Confirmar Contraseña</label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Repite tu contraseña">
-                </div>
-
-                <button type="submit" class="btn-primary btn-full" id="submitBtn">
-                    Crear Cuenta
-                </button>
-
-                <div class="form-footer">
-                    <p>¿Ya tienes cuenta? <a href="#" class="link" data-route="/login">Inicia sesión</a></p>
-                </div>
-            </form>
+  <div class="register-container">
+    <div class="floating-card card animate-fade-in">
+      <div class="text-center mb-6">
+        <h1 class="text-gradient text-3xl font-bold mb-2">Crear Cuenta</h1>
+        <p class="text-gray-600">Únete a miles de profesionales aprendiendo con IA</p>
+      </div>
+      <form class="register-form" id="registerForm">
+        <div class="form-group">
+          <label for="name" class="form-label">Nombre Completo</label>
+          <input type="text" id="name" name="name" required placeholder="Juan Pérez" class="input">
         </div>
-
-        <div class="register-info">
-            <h2>¿Por qué registrarte?</h2>
-            <div class="benefits">
-                <div class="benefit">
-                    <div class="benefit-icon">🎯</div>
-                    <div>
-                        <h3>Plan Personalizado</h3>
-                        <p>IA crea un plan único basado en tus objetivos</p>
-                    </div>
-                </div>
-                <div class="benefit">
-                    <div class="benefit-icon">🤖</div>
-                    <div>
-                        <h3>Chat con Claude</h3>
-                        <p>Asistencia 24/7 para resolver dudas</p>
-                    </div>
-                </div>
-            </div>
+        <div class="form-group">
+          <label for="email" class="form-label">Correo Electrónico</label>
+          <input type="email" id="email" name="email" required placeholder="juan@ejemplo.com" class="input">
         </div>
+        <div class="form-group">
+          <label for="password" class="form-label">Contraseña</label>
+          <input type="password" id="password" name="password" required placeholder="Mínimo 6 caracteres" class="input">
+          <div class="text-sm mt-2" id="passwordStrength"></div>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+          <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Repite tu contraseña" class="input">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Crear Cuenta</button>
+        <div class="form-footer mt-6 text-center">
+          <p class="text-gray-600">¿Ya tienes cuenta? <a href="#/login" class="text-primary" data-route="/login">Inicia sesión</a></p>
+        </div>
+      </form>
     </div>
+    <div class="floating-card card animate-fade-in" style="animation-delay: 0.2s;">
+      <h2 class="text-gray-800 text-2xl font-semibold text-center mb-8">¿Por qué registrarte?</h2>
+      <div class="space-y-6">
+        <div class="card hover-lift">
+          <div class="flex items-center gap-4">
+            <div class="text-4xl w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center">🎯</div>
+            <div>
+              <h3 class="text-gray-800 text-lg font-semibold mb-1">Plan Personalizado</h3>
+              <p class="text-gray-600 text-sm">IA crea un plan único basado en tus objetivos</p>
+            </div>
+          </div>
+        </div>
+        <div class="card hover-lift">
+          <div class="flex items-center gap-4">
+            <div class="text-4xl w-16 h-16 bg-secondary-100 rounded-2xl flex items-center justify-center">🤖</div>
+            <div>
+              <h3 class="text-gray-800 text-lg font-semibold mb-1">Chat con Claude</h3>
+              <p class="text-gray-600 text-sm">Asistencia 24/7 para resolver dudas</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+<script>
+(function(){
+  var form = document.getElementById('registerForm');
+  var pwd = document.getElementById('password');
+  var confirm = document.getElementById('confirmPassword');
+  var strengthEl = document.getElementById('passwordStrength');
+  if (pwd && strengthEl) {
+    pwd.addEventListener('input', function(){
+      var v = pwd.value, s = 0;
+      if (v.length >= 6) s++;
+      if (v.length >= 10) s++;
+      if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++;
+      if (/[0-9]/.test(v)) s++;
+      if (/[^a-zA-Z0-9]/.test(v)) s++;
+      var msg = s <= 1 ? 'Débil' : s <= 3 ? 'Media' : 'Fuerte';
+      strengthEl.textContent = 'Fortaleza: ' + msg;
+    });
+  }
+  if (confirm) {
+    confirm.addEventListener('input', function(){
+      if (pwd.value && confirm.value && pwd.value !== confirm.value) {
+        confirm.setCustomValidity('Las contraseñas no coinciden');
+      } else {
+        confirm.setCustomValidity('');
+      }
+    });
+  }
+  if (form) {
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      if (pwd.value !== confirm.value) {
+        if (typeof showNotification === 'function') showNotification('Las contraseñas no coinciden', 'error');
+        return;
+      }
+      var userData = { name: document.getElementById('name').value, email: document.getElementById('email').value, password: pwd.value };
+      var users = JSON.parse(localStorage.getItem('users') || '[]');
+      users.push(userData);
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      if (typeof showNotification === 'function') showNotification('Cuenta creada', 'success');
+      setTimeout(function(){ router.navigate('/onboarding'); }, 300);
+    });
+  }
+})();
+<\/script>
         `;
 
         const loginContent = `
 <div class="login-page">
-    <div class="login-container">
-        <div class="login-box">
-            <h1>Iniciar Sesión</h1>
-            <p class="login-subtitle">Bienvenido de vuelta a Plan Carrera Pro</p>
-
-            <form id="loginForm" class="login-form">
-                <div class="form-group">
-                    <label for="loginEmail">Email</label>
-                    <input 
-                        type="email" 
-                        id="loginEmail" 
-                        name="email" 
-                        placeholder="tu@email.com"
-                        required
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="loginPassword">Contraseña</label>
-                    <input 
-                        type="password" 
-                        id="loginPassword" 
-                        name="password" 
-                        placeholder="••••••••"
-                        required
-                    >
-                </div>
-
-                <button type="submit" class="btn-primary btn-full">
-                    Iniciar Sesión
-                </button>
-            </form>
-
-            <div class="login-divider">
-                <span>¿No tienes cuenta?</span>
-            </div>
-
-            <button class="btn-secondary btn-full" data-route="/register">
-                Crear cuenta nueva
-            </button>
-
-            <div class="login-footer">
-                <a href="#" onclick="alert('Feature coming soon'); return false;">¿Olvidaste tu contraseña?</a>
-                <span>•</span>
-                <a href="#/" data-route="/">Volver al inicio</a>
-            </div>
+  <div class="login-container">
+    <div class="floating-card card animate-fade-in">
+      <h1 class="text-gradient text-3xl font-bold mb-2">Iniciar Sesión</h1>
+      <p class="text-gray-600 mb-6">Bienvenido de vuelta a Plan Carrera Pro</p>
+      <form id="loginForm" class="mb-6">
+        <div class="form-group">
+          <label for="loginEmail" class="form-label">Email</label>
+          <input type="email" id="loginEmail" name="email" placeholder="tu@email.com" class="input" required>
         </div>
-
-        <div class="login-visual">
-            <div class="visual-card">
-                <div class="card-header">
-                    <div class="dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <div class="code-line"></div>
-                    <div class="code-line"></div>
-                    <div class="code-line"></div>
-                </div>
-            </div>
-            <div class="visual-text">
-                <h3>Continúa tu viaje profesional</h3>
-                <p>Accede a tu plan personalizado y sigue aprendiendo con IA.</p>
-            </div>
+        <div class="form-group">
+          <label for="loginPassword" class="form-label">Contraseña</label>
+          <input type="password" id="loginPassword" name="password" placeholder="••••••••" class="input" required>
         </div>
+        <button type="submit" class="btn btn-primary btn-block">Iniciar Sesión</button>
+      </form>
+      <div class="mb-6 text-center">
+        <span class="text-gray-500">¿No tienes cuenta?</span>
+      </div>
+      <button class="btn btn-secondary btn-block" data-route="/register">Crear cuenta nueva</button>
     </div>
+  </div>
 </div>
+<script>
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var email = document.getElementById('loginEmail').value;
+  var password = document.getElementById('loginPassword').value;
+  if (!email || !password) { alert('Por favor completa todos los campos'); return; }
+  var users = JSON.parse(localStorage.getItem('users') || '[]');
+  var user = users.find(function(u){ return u.email === email && u.password === password; });
+  if (user) {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    if (typeof showNotification === 'function') showNotification('¡Bienvenido!', 'success');
+    setTimeout(function(){ router.navigate('/dashboard'); }, 300);
+  } else {
+    if (typeof showNotification === 'function') showNotification('Email o contraseña incorrectos', 'error');
+  }
+});
+<\/script>
         `;
 
         const onboardingContent = `
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/onboarding.css">
 <div class="onboarding-page">
-    <div class="onboarding-container">
-        <div class="question-card">
-            <div class="question-header">
-                <h2>Onboarding Simplificado</h2>
-                <p>Responde algunas preguntas para personalizar tu plan</p>
+    <div class="onboarding-chat-wrapper">
+        <div class="chat-container card animate-fade-in" id="onboardingChatCard">
+            <!-- Header igual que el sidebar del dashboard: Groq AI + En línea -->
+            <header class="chat-header">
+                <div class="flex items-center gap-3">
+                    <div class="avatar relative">
+                        <div class="avatar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" class="chat-icon"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        </div>
+                        <span class="status-indicator"></span>
+                    </div>
+                    <div>
+                        <h2 class="text-white text-lg font-semibold m-0">Groq AI</h2>
+                        <span class="text-white opacity-90 text-sm">En línea · ¿Cuál será tu plan?</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Cuerpo del chat: mismo markup que el sidebar del dashboard -->
+            <div class="p-6 overflow-y-auto custom-scrollbar" id="onboardingMessages">
+                <div class="mb-4" data-role="assistant">
+                    <div class="card bg-gray-100 p-4 rounded-xl soft-shadow" style="border-bottom-left-radius: 0.25rem; max-width: 80%;">
+                        <p class="text-gray-800 text-sm mb-2">¿Qué te gustaría aprender? Cuéntame y te ayudo a definir tu camino.</p>
+                        <p class="text-gray-600 text-sm">Por ejemplo: SQL, Python, ciencia de datos, desarrollo web, machine learning…</p>
+                    </div>
+                </div>
+                <div class="p-4 flex flex-wrap gap-2" id="onboardingQuickQuestions">
+                    <button type="button" class="btn btn-secondary btn-sm" data-question="Quiero aprender Python">Quiero aprender Python</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-question="Quiero aprender SQL y análisis de datos">SQL y análisis de datos</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-question="Quiero ser desarrollador web">Desarrollador web</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-question="Quiero hacer ciencia de datos y ML">Ciencia de datos y ML</button>
+                </div>
+                <div class="p-4 text-center text-gray-500 text-sm" id="onboardingTyping" style="display: none;">
+                    <div class="animate-spin w-5 h-5 border-2 border-gray-300 border-t-primary-500 rounded-full mx-auto mb-2"></div>
+                    <span>Groq está escribiendo…</span>
+                </div>
+                <div class="chat-input-container p-4 border-t border-gray-200">
+                    <input type="text" class="input" id="onboardingUserInput" placeholder="Escribe tu mensaje…" autocomplete="off" />
+                    <button type="button" class="btn btn-primary rounded-xl" id="onboardingSendChatBtn" title="Enviar" aria-label="Enviar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </div>
+                <div class="p-4 border-t border-gray-200">
+                    <button type="button" class="btn btn-primary btn-block" id="onboardingGeneratePlanBtn">Generar mi plan con Groq</button>
+                </div>
             </div>
 
-            <div class="question-content">
-                <div class="form-group">
-                    <label>¿Cuál es tu nivel actual?</label>
-                    <select id="level">
-                        <option value="beginner">Principiante</option>
-                        <option value="intermediate">Intermedio</option>
-                        <option value="advanced">Avanzado</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>¿Qué quieres aprender?</label>
-                    <select id="interests">
-                        <option value="python">Python</option>
-                        <option value="javascript">JavaScript</option>
-                        <option value="sql">SQL</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>¿Cuánto tiempo tienes por día?</label>
-                    <select id="time">
-                        <option value="1">1 hora</option>
-                        <option value="2">2 horas</option>
-                        <option value="3">3+ horas</option>
-                    </select>
+            <!-- Estado: generando -->
+            <div class="onboarding-loading-state card p-12 text-center" id="loadingState" style="display: none; padding: 3rem; text-align: center; background: white;">
+                <div class="loading-content">
+                    <div class="animate-spin w-12 h-12 border-3 border-gray-200 border-t-primary-500 rounded-full mx-auto mb-4"></div>
+                    <h3 style="color: var(--gray-800); font-size: var(--font-size-xl); margin-bottom: 0.5rem; font-weight: 600;">Creando tu plan personalizado</h3>
+                    <p style="color: var(--gray-600); font-size: var(--font-size-base);">Groq está diseñando tu plan de carrera.</p>
                 </div>
             </div>
 
-            <div class="question-actions">
-                <button class="btn-primary" onclick="window.generatePlan()">
-                    Generar Mi Plan
-                </button>
+            <!-- Estado: éxito → ir al dashboard -->
+            <div class="onboarding-results-state card p-12 text-center" id="resultsState">
+                <div class="results-content">
+                    <div class="success-icon" style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+                    <h2 style="color: var(--gray-800); font-size: var(--font-size-2xl); margin-bottom: 1rem; font-weight: 600;">Plan generado</h2>
+                    <p class="onboarding-plan-title" id="planTitle" style="color: var(--gray-600); font-size: var(--font-size-lg); margin-bottom: 2rem;"></p>
+                    <button type="button" class="btn-primary btn-large soft-ui-button" id="goToDashboardBtn" style="padding: 1rem 2rem; font-size: var(--font-size-lg);">
+                        Ver mi Dashboard
+                    </button>
+                </div>
+            </div>
+
+            <!-- Estado: error -->
+            <div class="onboarding-error-state card p-12 text-center" id="errorState">
+                <div class="error-content">
+                    <p id="errorMessage" style="color: var(--gray-700); font-size: var(--font-size-base); margin-bottom: 1.5rem;"></p>
+                    <button type="button" class="btn-primary soft-ui-button" id="retryBtn">Intentar de nuevo</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    var API_BASE = typeof window.API_BASE_URL !== 'undefined' ? window.API_BASE_URL : '';
+    var WELCOME_GROQ = '¿Qué te gustaría aprender? Por ejemplo: SQL, Python, ciencia de datos, desarrollo web, machine learning…';
+
+    var chatState = {
+        messages: [{ role: 'assistant', content: WELCOME_GROQ }],
+        loading: false
+    };
+
+    function showState(state) {
+        var chatEl = document.getElementById('onboardingChatCard');
+        var loadingEl = document.getElementById('loadingState');
+        var resultsEl = document.getElementById('resultsState');
+        var errorEl = document.getElementById('errorState');
+        [chatEl, loadingEl, resultsEl, errorEl].forEach(function(el) {
+            if (el) el.style.display = 'none';
+        });
+        if (state === 'chat' && chatEl) chatEl.style.display = 'block';
+        if (state === 'loading' && loadingEl) loadingEl.style.display = 'block';
+        if (state === 'results' && resultsEl) resultsEl.style.display = 'block';
+        if (state === 'error' && errorEl) errorEl.style.display = 'block';
+    }
+
+    function escapeHtml(text) {
+        if (text == null) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    function nl2br(text) {
+        return escapeHtml(text || '').replace(/\n/g, '<br>');
+    }
+
+    /** Renderiza mensajes con la misma estructura que el chatbot del dashboard (chatbot-msg, chatbot-msg-content) */
+    function renderOnboardingMessages() {
+        var container = document.getElementById('onboardingMessages');
+        if (!container) return;
+        container.innerHTML = '';
+        chatState.messages.forEach(function(msg) {
+            var div = document.createElement('div');
+            div.className = 'chatbot-msg chatbot-msg-' + msg.role;
+            div.setAttribute('data-role', msg.role);
+            var isAssistant = msg.role === 'assistant';
+            var content = isAssistant ? nl2br(msg.content) : escapeHtml(msg.content);
+            div.innerHTML = '<div class="chatbot-msg-content">' + (isAssistant ? '<p>' + content + '</p>' : '<p>' + content + '</p>') + '</div>';
+            container.appendChild(div);
+        });
+        container.scrollTop = container.scrollHeight;
+        var qq = document.getElementById('onboardingQuickQuestions');
+        if (qq) qq.style.display = chatState.messages.length <= 1 ? 'flex' : 'none';
+    }
+
+    function setChatLoading(loading) {
+        chatState.loading = loading;
+        var typingEl = document.getElementById('onboardingTyping');
+        if (typingEl) typingEl.style.display = loading ? 'flex' : 'none';
+        if (loading) {
+            var messages = document.getElementById('onboardingMessages');
+            if (messages) messages.scrollTop = messages.scrollHeight;
+        }
+    }
+
+    /** Envía mensaje a Groq (misma lógica que el sidebar: POST /chat/message) */
+    function sendChatMessage(text) {
+        var msg = (text || '').trim();
+        if (!msg || chatState.loading) {
+            console.log('Mensaje vacío o en estado de carga:', { msg: msg, loading: chatState.loading });
+            return;
+        }
+
+        console.log('Enviando mensaje:', msg);
+        chatState.messages.push({ role: 'user', content: msg });
+        renderOnboardingMessages();
+        setChatLoading(true);
+
+        function done(responseText) {
+            chatState.messages.push({ role: 'assistant', content: responseText });
+            renderOnboardingMessages();
+            setChatLoading(false);
+        }
+        function fail(errMsg) {
+            chatState.messages.push({ role: 'assistant', content: errMsg || 'No pude procesar tu mensaje. Inténtalo de nuevo.' });
+            renderOnboardingMessages();
+            setChatLoading(false);
+        }
+
+        if (!API_BASE) {
+            console.error('API_BASE no configurado:', API_BASE);
+            fail('Backend no configurado (API_BASE_URL). Configura el servidor para usar Groq.');
+            return;
+        }
+
+        console.log('Haciendo fetch a:', API_BASE + '/chat/message');
+        fetch(API_BASE + '/chat/message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg })
+        })
+            .then(function(res) {
+                console.log('Respuesta del servidor:', res.status, res.ok);
+                return res.json().then(function(data) {
+                    if (!res.ok) {
+                        var detail = data.detail;
+                        var msg = typeof detail === 'string' ? detail : (Array.isArray(detail) ? (detail[0] && detail[0].msg) || JSON.stringify(detail) : 'Error ' + res.status);
+                        throw new Error(msg || 'Error en el servidor');
+                    }
+                    return data;
+                }).catch(function(e) {
+                    if (e instanceof Error && e.message) throw e;
+                    throw new Error('Error ' + res.status);
+                });
+            })
+            .then(function(data) {
+                console.log('Datos recibidos:', data);
+                done(data.message || 'Sin respuesta');
+            })
+            .catch(function(err) {
+                console.error('Onboarding chat (Groq):', err);
+                fail(err && err.message ? err.message : 'No se pudo conectar. ¿Está el backend en ' + API_BASE + '?');
+            });
+    }
+
+    function savePlanAndUser(planPayload) {
+        var raw = planPayload.generated_plan || planPayload.plan_content || planPayload;
+        var planContent = typeof raw === 'string' ? (function() { try { return JSON.parse(raw); } catch (e) { return raw; } })() : raw;
+        var supaUser = window.supabase && window.supabase.getCurrentUser ? window.supabase.getCurrentUser() : null;
+        if (!supaUser || !supaUser.id) {
+            console.error('Usuario Supabase no disponible para guardar plan');
+            return;
+        }
+        if (typeof planService === 'undefined' || !planService || !planService.savePlan) {
+            console.error('PlanService no disponible');
+            return;
+        }
+        planService.savePlan(supaUser.id, planContent, { source: 'onboarding-chat' })
+            .then(function(res) {
+                if (!res || !res.success) {
+                    throw new Error('Error al guardar el plan en Supabase');
+                }
+                console.log('Plan guardado en Supabase con id:', res.plan.id);
+                window.auth && window.auth.markOnboardingComplete(supaUser.id);
+            })
+            .catch(function(err) {
+                console.error('Error guardando plan en Supabase:', err);
+            });
+    }
+
+    function goToDashboard() {
+        sessionStorage.removeItem('fromRegister');
+        sessionStorage.removeItem('creatingNewPlan');
+        if (window.router) window.router.navigate('/dashboard');
+        else if (window.location.hash) window.location.hash = '#/dashboard';
+        else window.location.href = 'index.html#/dashboard';
+    }
+
+    /** Genera el plan con Groq (POST /ai/generate-plan-from-chat) usando el último mensaje del usuario o todos */
+    function generatePlanFromConversation() {
+        var userMessages = chatState.messages.filter(function(m) { return m.role === 'user'; }).map(function(m) { return m.content; });
+        var messageToSend = userMessages.length > 0 ? (userMessages.length === 1 ? userMessages[0] : userMessages.join(' | ')) : '';
+        if (!messageToSend.trim()) {
+            if (window.showNotification) window.showNotification('Escribe al menos un mensaje sobre qué quieres estudiar antes de generar el plan.', 'warning');
+            else alert('Escribe al menos un mensaje sobre qué quieres estudiar antes de generar el plan.');
+            return;
+        }
+
+        showState('loading');
+        function onError(err) {
+            console.error('Error generando plan:', err);
+            showState('error');
+            var errMsg = document.getElementById('errorMessage');
+            if (errMsg) errMsg.textContent = (err && err.message) || (typeof err === 'string' ? err : 'No se pudo generar el plan.');
+        }
+
+        if (!API_BASE) {
+            onError(new Error('Backend no configurado (API_BASE_URL).'));
+            return;
+        }
+
+        fetch(API_BASE + '/ai/generate-plan-from-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: messageToSend })
+        })
+            .then(function(res) {
+                return res.json().then(function(data) {
+                    if (!res.ok) {
+                        var d = data.detail || data.message;
+                        throw new Error(typeof d === 'string' ? d : (Array.isArray(d) ? (d[0] && d[0].msg) || JSON.stringify(d) : 'Error ' + res.status));
+                    }
+                    return data;
+                });
+            })
+            .then(function(data) {
+                savePlanAndUser(data);
+                var titleEl = document.getElementById('planTitle');
+                if (titleEl) titleEl.textContent = data.title || 'Tu plan de carrera';
+                showState('results');
+            })
+            .catch(onError);
+    }
+
+    function initOnboarding() {
+        var auth = window.auth;
+        // Sin autenticación de rutas: permitir acceso directo a onboarding.
+
+        chatState.messages = [{ role: 'assistant', content: WELCOME_GROQ }];
+        chatState.loading = false;
+        showState('chat');
+        renderOnboardingMessages();
+
+        var input = document.getElementById('onboardingUserInput');
+        var sendChatBtn = document.getElementById('onboardingSendChatBtn');
+        var generatePlanBtn = document.getElementById('onboardingGeneratePlanBtn');
+        var goBtn = document.getElementById('goToDashboardBtn');
+        var retryBtn = document.getElementById('retryBtn');
+
+        console.log('Elementos encontrados:', {
+            input: !!input,
+            sendChatBtn: !!sendChatBtn,
+            generatePlanBtn: !!generatePlanBtn,
+            goBtn: !!goBtn,
+            retryBtn: !!retryBtn
+        });
+
+        if (sendChatBtn && input) {
+            console.log('Asignando evento click al botón de enviar');
+            sendChatBtn.addEventListener('click', function(e) {
+                console.log('Botón de enviar clickeado');
+                e.preventDefault();
+                var message = input.value.trim();
+                if (message) {
+                    sendChatMessage(message);
+                    input.value = '';
+                } else {
+                    console.log('Mensaje vacío, no se envía');
+                }
+            });
+        } else {
+            console.log('No se encontraron elementos para asignar evento:', { sendChatBtn: !!sendChatBtn, input: !!input });
+        }
+        if (input) {
+            console.log('Asignando evento keydown al input');
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    console.log('Tecla Enter presionada');
+                    e.preventDefault();
+                    var message = input.value.trim();
+                    if (message) {
+                        sendChatMessage(message);
+                        input.value = '';
+                    } else {
+                        console.log('Mensaje vacío, no se envía');
+                    }
+                }
+            });
+        }
+        if (generatePlanBtn) generatePlanBtn.addEventListener('click', generatePlanFromConversation);
+        if (goBtn) goBtn.addEventListener('click', goToDashboard);
+        if (retryBtn) retryBtn.addEventListener('click', function() { showState('chat'); });
+
+        var quickQuestions = document.getElementById('onboardingQuickQuestions');
+        if (quickQuestions) {
+            quickQuestions.querySelectorAll('.btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var q = this.getAttribute('data-question');
+                    if (q) { sendChatMessage(q); }
+                });
+            });
+        }
+    }
+
+    window.initOnboarding = initOnboarding;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initOnboarding);
+    } else {
+        initOnboarding();
+    }
+})();
+<\/script>
         `;
 
         const dashboardContent = `
-<div class="dashboard-page dashboard-clean">
-    <header class="dashboard-header dashboard-header-clean">
+<div class="dashboard-page">
+    <header class="dashboard-header">
         <div class="header-content">
             <div class="header-left">
                 <h1 class="dashboard-title">Hola, <span id="userName">Usuario</span></h1>
                 <p class="dashboard-subtitle">Tu plan de carrera</p>
             </div>
             <div class="header-right">
-                <button type="button" class="btn-secondary btn-ghost" onclick="logout()">Cerrar sesión</button>
+                <button type="button" class="btn-secondary" onclick="logout()">Cerrar sesión</button>
             </div>
         </div>
     </header>
-    <main class="dashboard-main dashboard-main-clean">
+    <main class="dashboard-main">
         <section class="plan-card-section" id="planCardSection" style="display:none;"><div id="planCardContainer"></div></section>
         <section class="empty-state" id="emptyState">
             <div class="empty-content">
                 <p class="empty-message">Aún no tienes un Plan de Carrera creado.</p>
-                <p class="empty-hint">Regístrate y completa el onboarding para que la IA genere tu plan según tus opciones.</p>
+                <p class="empty-hint">Cuéntanos qué quieres estudiar en el onboarding y Groq diseñará tu plan de carrera.</p>
+                <a href="#/onboarding" class="btn-primary" data-route="/onboarding" style="margin-top: 1rem; display: inline-block;">Nuevo plan Carrera</a>
             </div>
         </section>
         <div class="loading-state" id="loadingState" style="display:none;"><div class="loading-content"><div class="loading-spinner"></div><p>Cargando...</p></div></div>
         <div class="error-state" id="errorState" style="display:none;"><div class="error-content"><p id="errorMessage"></p><button type="button" class="btn-primary" onclick="loadDashboard()">Reintentar</button></div></div>
     </main>
+    <div id="chatbotSidebarRoot">
+      <div class="chatbot-sidebar-overlay" id="chatbotOverlay" aria-hidden="true"></div>
+      <aside class="chatbot-sidebar-panel" id="chatbotSidebar" aria-hidden="true">
+        <header class="chatbot-sidebar-header">
+          <div class="chatbot-sidebar-header-left">
+            <div class="chatbot-avatar-wrap">
+              <div class="chatbot-avatar"><svg class="chatbot-avatar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+              <span class="chatbot-avatar-online"></span>
+            </div>
+            <div><h2 class="chatbot-sidebar-title">Groq AI</h2><span class="chatbot-sidebar-status">En línea</span></div>
+          </div>
+          <div class="chatbot-sidebar-header-actions">
+            <button type="button" class="chatbot-sidebar-btn-icon" id="chatbotBtnMinimize" title="Minimizar" aria-label="Minimizar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4v16M16 4v16"/><line x1="4" y1="8" x2="4" y2="16"/><line x1="20" y1="8" x2="20" y2="16"/></svg></button>
+            <button type="button" class="chatbot-sidebar-btn-icon" id="chatbotBtnClose" title="Cerrar" aria-label="Cerrar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+        </header>
+        <div class="chatbot-sidebar-minimized" id="chatbotMinimizedView" style="display:none;"><button type="button" class="chatbot-sidebar-btn-maximize" id="chatbotBtnMaximize" title="Expandir"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg> Abrir chat</button></div>
+        <div class="chatbot-sidebar-body" id="chatbotSidebarBody">
+          <div class="chatbot-sidebar-messages" id="chatbotMessages">
+            <div class="chatbot-msg chatbot-msg-assistant" data-role="assistant">
+              <div class="chatbot-msg-content">
+                <div class="carrerbot-container" id="carrerbotMount">
+                  <div class="carrerbot-hero" aria-hidden="true">
+                    <img src="carrerbot/carrerbotdashboard.png" alt="CarrerBot" class="carrerbot-hero-img">
+                  </div>
+                </div>
+                <p>¡Hola! 👋 Soy tu mentor (Groq AI).</p><p>¿En qué puedo ayudarte hoy? Puedo:</p><ul><li>Resolver dudas sobre tu plan de carrera</li><li>Explicar conceptos técnicos</li><li>Revisar tu código</li><li>Sugerir recursos de aprendizaje</li><li>Motivarte en tu proceso 💪</li></ul>
+              </div>
+            </div>
+          </div>
+          <div class="chatbot-quick-questions" id="chatbotQuickQuestions">
+            <button type="button" class="chatbot-quick-btn" data-question="¿Cómo va mi progreso?">¿Cómo va mi progreso?</button>
+            <button type="button" class="chatbot-quick-btn" data-question="Dame un consejo para hoy">Dame un consejo para hoy</button>
+            <button type="button" class="chatbot-quick-btn" data-question="Explícame un concepto de mi fase actual">Explícame un concepto de mi fase actual</button>
+            <button type="button" class="chatbot-quick-btn" data-question="¿Qué proyecto debo hacer ahora?">¿Qué proyecto debo hacer ahora?</button>
+          </div>
+          <div class="chatbot-typing" id="chatbotTyping" style="display:none;"><div class="chatbot-typing-spinner"></div><span>Groq está escribiendo...</span></div>
+          <div class="chatbot-input-wrap"><input type="text" class="chatbot-input" id="chatbotInput" placeholder="Escribe tu mensaje..." autocomplete="off"/><button type="button" class="chatbot-send-btn" id="chatbotSendBtn" title="Enviar" aria-label="Enviar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
+        </div>
+      </aside>
+      <button type="button" class="chatbot-float-btn" id="chatbotFloatBtn" aria-label="Abrir chat con Groq AI"><span class="chatbot-float-btn-pulse"></span><span class="chatbot-float-btn-inner"><svg class="chatbot-float-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span class="chatbot-float-badge">!</span></span><span class="chatbot-float-tooltip">Hablar con Groq AI 💬</span></button>
+    </div>
 </div>
 <script>
 var userPlan=null;var currentPlanId=null;
-function loadDashboard(){try{if(!auth||!auth.isAuthenticated()){router.navigate('/register');return;}var user=auth.getUser();document.getElementById('userName').textContent=user.name||user.email||'Usuario';document.getElementById('loadingState').style.display='block';document.getElementById('planCardSection').style.display='none';document.getElementById('emptyState').style.display='none';document.getElementById('errorState').style.display='none';function finish(plan){userPlan=plan;if(userPlan&&!userPlan.id)userPlan.id='local-'+(userPlan.created_at?new Date(userPlan.created_at).getTime():Date.now());document.getElementById('loadingState').style.display='none';if(userPlan){renderPlanCard();document.getElementById('planCardSection').style.display='block';document.getElementById('emptyState').style.display='none';}else{document.getElementById('planCardSection').style.display='none';document.getElementById('emptyState').style.display='block';}}if(typeof planService!=='undefined'&&planService&&planService.getUserPlans){planService.getUserPlans(user.id).then(function(plans){var p=(plans&&plans.length>0)?plans[0]:null;finish(p);}).catch(function(){var s=localStorage.getItem('currentPlan');if(s)try{finish(JSON.parse(s));}catch(e){finish(null);}else finish(null);});}else{var s=localStorage.getItem('currentPlan');if(s)try{finish(JSON.parse(s));}catch(e){finish(null);}else finish(null);}}catch(e){document.getElementById('loadingState').style.display='none';document.getElementById('errorState').style.display='block';document.getElementById('errorMessage').textContent=e.message;}}
-function renderPlanCard(){var c=document.getElementById('planCardContainer');if(!c||!userPlan)return;var d=userPlan.plan_content||userPlan;if(typeof d==='string')try{d=JSON.parse(d);}catch(e){d={};}var title=userPlan.title||d.title||'Plan de carrera';var desc=userPlan.description||d.description||'';var obj=userPlan.objective||d.objective||'';var dl=userPlan.estimated_duration||d.estimatedDuration||d.estimated_duration||'';var created=userPlan.created_at?function(iso){try{return new Date(iso).toLocaleDateString('es-ES',{year:'numeric',month:'long',day:'numeric'});}catch(e){return'';}}(userPlan.created_at):'';var what=desc;if(!what&&d.phases&&d.phases.length>0){var t=d.phases[0].topics||d.phases[0].learning_objectives||[];what=t.slice(0,3).join(', ');}var id=userPlan.id||'';function esc(t){if(t==null)return'';var x=document.createElement('div');x.textContent=t;return x.innerHTML;}function escA(t){if(t==null)return'';return String(t).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}c.innerHTML='<article class="plan-career-card" onclick="goToPlanDetail(\\''+escA(id)+'\\')" role="button" tabindex="0"><h2 class="plan-career-card-title">'+esc(title)+'</h2>'+(what?'<p class="plan-career-card-field"><span class="label">Qué vas a estudiar</span>'+esc(what)+'</p>':'')+(obj?'<p class="plan-career-card-field"><span class="label">Objetivo principal</span>'+esc(obj)+'</p>':'')+(dl?'<p class="plan-career-card-field"><span class="label">Plazo estimado</span>'+esc(dl)+'</p>':'')+(created?'<p class="plan-career-card-field plan-career-card-date"><span class="label">Fecha de creación</span>'+esc(created)+'</p>':'')+'<p class="plan-career-card-cta">Ver detalle del plan →</p></article>';}
+function loadDashboard(){try{var supaUser=window.supabase&&window.supabase.getCurrentUser?window.supabase.getCurrentUser():null;if(!supaUser){router.navigate('/login');return;}document.getElementById('userName').textContent=(supaUser.user_metadata&&supaUser.user_metadata.name)||supaUser.email||'Usuario';document.getElementById('loadingState').style.display='block';document.getElementById('planCardSection').style.display='none';document.getElementById('emptyState').style.display='none';document.getElementById('errorState').style.display='none';function finish(plan){userPlan=plan;if(userPlan&&!userPlan.id)userPlan.id='local-'+(userPlan.created_at?new Date(userPlan.created_at).getTime():Date.now());document.getElementById('loadingState').style.display='none';if(userPlan){renderPlanCard();document.getElementById('planCardSection').style.display='block';document.getElementById('emptyState').style.display='none';}else{document.getElementById('planCardSection').style.display='none';document.getElementById('emptyState').style.display='block';}}if(typeof planService!=='undefined'&&planService&&planService.getUserPlans){planService.getUserPlans(supaUser.id).then(function(plans){var p=(plans&&plans.length>0)?plans[0]:null;finish(p);}).catch(function(){var s=localStorage.getItem('currentPlan');if(s)try{finish(JSON.parse(s));}catch(e){finish(null);}else finish(null);});}else{var s=localStorage.getItem('currentPlan');if(s)try{finish(JSON.parse(s));}catch(e){finish(null);}else finish(null);}}catch(e){document.getElementById('loadingState').style.display='none';document.getElementById('errorState').style.display='block';document.getElementById('errorMessage').textContent=e.message;}}
+function renderPlanCard(){var c=document.getElementById('planCardContainer');if(!c||!userPlan)return;var d=userPlan.plan_content||userPlan;if(typeof d==='string')try{d=JSON.parse(d);}catch(e){d={};}var title=userPlan.title||d.plan_title||d.title||'Plan de carrera';var desc=userPlan.description||d.description||'';var obj=userPlan.objective||d.objective||'';var totalWeeks=d.total_weeks||userPlan.timeline_weeks;var dl=userPlan.estimated_duration||d.estimatedDuration||d.estimated_duration||(totalWeeks?totalWeeks+' semanas':'');var created=userPlan.created_at?function(iso){try{return new Date(iso).toLocaleDateString('es-ES',{year:'numeric',month:'long',day:'numeric'});}catch(e){return'';}}(userPlan.created_at):'';var phaseCount=(d.phases&&d.phases.length)||0;var what=desc;if(!what&&d.phases&&d.phases.length>0){var f0=d.phases[0];var t=f0.learning_items||f0.topics||f0.learning_objectives||[];what=t.slice(0,3).join(', ');}var id=userPlan.id||'';function esc(t){if(t==null)return'';var x=document.createElement('div');x.textContent=t;return x.innerHTML;}function escA(t){if(t==null)return'';return String(t).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}c.innerHTML='<article class="plan-career-card" onclick="goToPlanDetail(\\''+escA(id)+'\\')" role="button" tabindex="0"><h2 class="plan-career-card-title">'+esc(title)+'</h2>'+(what?'<p class="plan-career-card-field"><span class="label">Qué vas a estudiar</span>'+esc(what)+'</p>':'')+(obj?'<p class="plan-career-card-field"><span class="label">Objetivo principal</span>'+esc(obj)+'</p>':'')+(dl?'<p class="plan-career-card-field"><span class="label">Plazo estimado</span>'+esc(dl)+'</p>':'')+(phaseCount?'<p class="plan-career-card-field"><span class="label">Fases</span>'+phaseCount+' fases</p>':'')+(created?'<p class="plan-career-card-field plan-career-card-date"><span class="label">Fecha de creación</span>'+esc(created)+'</p>':'')+'<p class="plan-career-card-cta">Ver detalle del plan →</p></article>';}
 function goToPlanDetail(planId){currentPlanId=planId;if(router)router.navigate('/dashboard/plan/'+planId);}
 function logout(){try{if(auth)auth.logout();if(router)router.navigate('/');}catch(e){if(router)router.navigate('/');}}
-if(document.readyState!=='loading')loadDashboard();else document.addEventListener('DOMContentLoaded',loadDashboard);
+if(document.readyState!=='loading'){loadDashboard();if(window.initChatbotSidebar)window.initChatbotSidebar();}else document.addEventListener('DOMContentLoaded',function(){loadDashboard();if(window.initChatbotSidebar)window.initChatbotSidebar();});
 </scr` + `ipt>
         `;
 
@@ -1120,6 +1354,7 @@ if(document.readyState!=='loading')loadDashboard();else document.addEventListene
         router.addRoute('/register', registerContent);
         router.addRoute('/onboarding', onboardingContent);
         router.addRoute('/dashboard', dashboardContent);
+        router.addRoute('/projects', '<div class="loading-state"><div class="loading-content"><div class="loading-spinner"></div><p>Cargando proyectos...</p></div></div>');
 
         // Ocultar loading y mostrar primera ruta; se ejecuta al final, cuando todo está definido
         function hideLoadingScreen() {
@@ -1140,5 +1375,55 @@ if(document.readyState!=='loading')loadDashboard();else document.addEventListene
         window.addEventListener('load', hideLoadingScreen);
         setTimeout(hideLoadingScreen, 1500);
     </script>
+    <style>
+    /* CarrerBot en chatbot sidebar */
+    .chatbot-sidebar .carrerbot-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0 16px;
+    }
+
+    .chatbot-sidebar .carrerbot-hero {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08);
+      animation: carrerbotFloat 3.2s ease-in-out infinite;
+      overflow: hidden;
+    }
+
+    .chatbot-sidebar .carrerbot-hero-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* CarrerBot en landing (modo archivo) */
+    .carrerbot--hero .carrerbot-hero {
+      width: 360px;
+      height: 360px;
+      border-radius: 36px;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.12);
+      animation: carrerbotFloat 3.2s ease-in-out infinite;
+      overflow: hidden;
+    }
+
+    .carrerbot--hero .carrerbot-hero-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+    }
+
+    @keyframes carrerbotFloat {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+      100% { transform: translateY(0); }
+    }
+    </style>
 </body>
 </html>

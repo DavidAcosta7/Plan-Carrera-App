@@ -1,600 +1,378 @@
-<div class="onboarding-page">
-    <div class="onboarding-container">
-        <!-- Progress Bar -->
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
-            <div class="progress-steps">
-                <div class="step active" data-step="1">1</div>
-                <div class="step" data-step="2">2</div>
-                <div class="step" data-step="3">3</div>
-                <div class="step" data-step="4">4</div>
-                <div class="step" data-step="5">5</div>
-            </div>
-        </div>
+<!--
+  Onboarding: card grande tipo modal con chat.
+  Groq pregunta "¿Cuál será tu plan?", el usuario responde y Groq genera el plan.
+  Al terminar se guarda y redirige al dashboard.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onboarding - Plan Carrera Pro</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/onboarding.css">
+</head>
+<body class="onboarding-page">
+    <div class="onboarding-chat-wrapper">
+        <div class="chat-container card animate-fade-in" id="onboardingChatCard">
+            <!-- Header igual que el sidebar del dashboard: Groq AI + En línea -->
+            <header class="chat-header">
+                <div class="flex items-center gap-3">
+                    <div class="avatar relative">
+                        <div class="avatar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" class="chat-icon"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        </div>
+                        <span class="status-indicator"></span>
+                    </div>
+                    <div>
+                        <h2 class="text-white text-lg font-semibold m-0">Groq AI</h2>
+                        <span class="text-white opacity-90 text-sm">En línea · ¿Cuál será tu plan?</span>
+                    </div>
+                </div>
+            </header>
 
-        <!-- Question Card -->
-        <div class="question-card" id="questionCard">
-            <div class="question-header">
-                <h2 id="questionTitle">Pregunta 1 de 5</h2>
-                <p id="questionSubtitle">Cuéntanos sobre ti para crear tu plan perfecto</p>
+            <!-- Cuerpo del chat: mismo markup que el sidebar del dashboard -->
+            <div class="p-6 overflow-y-auto custom-scrollbar" id="onboardingMessages">
+                <div class="mb-4" data-role="assistant">
+                    <div class="card bg-gray-100 p-4 rounded-xl soft-shadow" style="border-bottom-left-radius: 0.25rem; max-width: 80%;">
+                        <p class="text-gray-800 text-sm mb-2">¿Qué te gustaría aprender? Cuéntame y te ayudo a definir tu camino.</p>
+                        <p class="text-gray-600 text-sm">Por ejemplo: SQL, Python, ciencia de datos, desarrollo web, machine learning…</p>
+                    </div>
+                </div>
+                <div class="p-4 flex flex-wrap gap-2" id="onboardingQuickQuestions">
+                    <button type="button" class="btn btn-secondary btn-sm" data-question="Quiero aprender Python">Quiero aprender Python</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-question="Quiero aprender SQL y análisis de datos">SQL y análisis de datos</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-question="Quiero ser desarrollador web">Desarrollador web</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-question="Quiero hacer ciencia de datos y ML">Ciencia de datos y ML</button>
+                </div>
+                <div class="p-4 text-center text-gray-500 text-sm" id="onboardingTyping" style="display: none;">
+                    <div class="animate-spin w-5 h-5 border-2 border-gray-300 border-t-primary-500 rounded-full mx-auto mb-2"></div>
+                    <span>Groq está escribiendo…</span>
+                </div>
+                <div class="chat-input-container p-4 border-t border-gray-200">
+                    <input type="text" class="input" id="onboardingUserInput" placeholder="Escribe tu mensaje…" autocomplete="off" />
+                    <button type="button" class="btn btn-primary rounded-xl" id="onboardingSendChatBtn" title="Enviar" aria-label="Enviar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </div>
+                <div class="p-4 border-t border-gray-200">
+                    <button type="button" class="btn btn-primary btn-block" id="onboardingGeneratePlanBtn">Generar mi plan con Groq</button>
+                </div>
             </div>
 
-            <div class="question-content" id="questionContent">
-                <!-- Las preguntas se cargarán dinámicamente -->
+            <!-- Estado: generando -->
+            <div class="onboarding-loading-state card p-12 text-center" id="loadingState" style="display: none; padding: 3rem; text-align: center; background: white;">
+                <div class="loading-content">
+                    <div class="animate-spin w-12 h-12 border-3 border-gray-200 border-t-primary-500 rounded-full mx-auto mb-4"></div>
+                    <h3 style="color: var(--gray-800); font-size: var(--font-size-xl); margin-bottom: 0.5rem; font-weight: 600;">Creando tu plan personalizado</h3>
+                    <p style="color: var(--gray-600); font-size: var(--font-size-base);">Groq está diseñando tu plan de carrera.</p>
+                </div>
             </div>
 
-            <div class="question-actions">
-                <button class="btn-secondary" id="prevBtn" onclick="previousQuestion()" style="display: none;">
-                    Anterior
-                </button>
-                <button class="btn-primary" id="nextBtn" onclick="nextQuestion()">
-                    Siguiente
-                </button>
-                <button class="btn-primary" id="generateBtn" onclick="generatePlan()" style="display: none;">
-                    Generar Mi Plan con IA
-                </button>
+            <!-- Estado: éxito → ir al dashboard -->
+            <div class="onboarding-results-state card p-12 text-center" id="resultsState">
+                <div class="results-content">
+                    <div class="success-icon" style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+                    <h2 style="color: var(--gray-800); font-size: var(--font-size-2xl); margin-bottom: 1rem; font-weight: 600;">Plan generado</h2>
+                    <p class="onboarding-plan-title" id="planTitle" style="color: var(--gray-600); font-size: var(--font-size-lg); margin-bottom: 2rem;"></p>
+                    <button type="button" class="btn-primary btn-large soft-ui-button" id="goToDashboardBtn" style="padding: 1rem 2rem; font-size: var(--font-size-lg);">
+                        Ver mi Dashboard
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <!-- Loading State -->
-        <div class="loading-state" id="loadingState" style="display: none;">
-            <div class="loading-content">
-                <div class="loading-spinner"></div>
-                <h3>Creando tu plan personalizado...</h3>
-                <p>Claude IA está analizando tus respuestas para generar tu plan de carrera perfecto.</p>
-            </div>
-        </div>
-
-        <!-- Results -->
-        <div class="results-state" id="resultsState" style="display: none;">
-            <div class="results-content">
-                <div class="success-icon">🎉</div>
-                <h2>¡Plan Generado Exitosamente!</h2>
-                <p id="planTitle" style="font-size: 1.3em; font-weight: 600; margin: 20px 0;"></p>
-                <p id="planDescription">Tu plan personalizado ha sido creado por Claude IA</p>
-                <button class="btn-primary btn-large" onclick="goToDashboard()">
-                    Ver Mi Dashboard
-                </button>
-            </div>
-        </div>
-
-        <!-- Error State -->
-        <div class="error-state" id="errorState" style="display: none;">
-            <div class="error-content">
-                <div class="error-icon">⚠️</div>
-                <h2>Error al generar el plan</h2>
-                <p id="errorMessage"></p>
-                <button class="btn-primary" onclick="retryGeneration()">
-                    Intentar de nuevo
-                </button>
-                <button class="btn-secondary" onclick="previousQuestion()">
-                    Volver
-                </button>
+            <!-- Estado: error -->
+            <div class="onboarding-error-state card p-12 text-center" id="errorState">
+                <div class="error-content">
+                    <p id="errorMessage" style="color: var(--gray-700); font-size: var(--font-size-base); margin-bottom: 1.5rem;"></p>
+                    <button type="button" class="btn-primary soft-ui-button" id="retryBtn">Intentar de nuevo</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
 <script>
-/**
- * Script de Onboarding mejorado con integración de Claude IA
- * Flujo: Preguntas → Respuestas guardadas → IA genera plan → Guardado en BD → Dashboard
- */
+(function() {
+    var API_BASE = typeof window.API_BASE_URL !== 'undefined' ? window.API_BASE_URL : '';
+    var WELCOME_GROQ = '¿Qué te gustaría aprender? Por ejemplo: SQL, Python, ciencia de datos, desarrollo web, machine learning…';
 
-// Definición de preguntas del onboarding
-const questions = [
-    {
-        id: 1,
-        title: "¿Cuál es tu nivel actual?",
-        subtitle: "Esto nos ayudará a adaptar el contenido a tu experiencia",
-        type: "single",
-        fieldName: "level",
-        options: [
-            { value: "beginner", label: "🌱 Principiante", description: "Nunca he programado o tengo conocimientos básicos" },
-            { value: "intermediate", label: "🚀 Intermedio", description: "Tengo experiencia en algún lenguaje o tecnología" },
-            { value: "advanced", label: "💪 Avanzado", description: "Soy desarrollador con experiencia buscando especializarme" }
-        ]
-    },
-    {
-        id: 2,
-        title: "¿Qué quieres aprender?",
-        subtitle: "Selecciona las áreas que más te interesan",
-        type: "multiple",
-        fieldName: "interests",
-        options: [
-            { value: "python", label: "🐍 Python", description: "Data Science, AI, Backend" },
-            { value: "javascript", label: "⚡ JavaScript", description: "Frontend, Backend, Apps" },
-            { value: "sql", label: "🗄️ SQL", description: "Bases de datos, Análisis" },
-            { value: "mobile", label: "📱 Mobile", description: "iOS, Android, React Native" },
-            { value: "devops", label: "🔧 DevOps", description: "Cloud, Docker, CI/CD" },
-            { value: "ai", label: "🤖 AI/ML", description: "Machine Learning, Deep Learning" }
-        ]
-    },
-    {
-        id: 3,
-        title: "¿Cuánto tiempo tienes por día?",
-        subtitle: "Sé realista para crear un plan sostenible",
-        type: "single",
-        fieldName: "timePerDay",
-        options: [
-            { value: "1", label: "⏰ 1 hora", description: "Poco tiempo pero constante" },
-            { value: "2", label: "⏰ 2 horas", description: "Un buen balance" },
-            { value: "3", label: "⏰ 3+ horas", description: "Mucho tiempo disponible" }
-        ]
-    },
-    {
-        id: 4,
-        title: "¿Cuál es tu objetivo principal?",
-        subtitle: "Esto ayudará a enfocar tu plan hacia metas específicas",
-        type: "single",
-        fieldName: "goal",
-        options: [
-            { value: "job", label: "💼 Conseguir trabajo", description: "Quiero mi primer trabajo o cambiar de carrera" },
-            { value: "freelance", label: "🎯 Freelance", description: "Quiero trabajar por mi cuenta" },
-            { value: "promotion", label: "📈 Promoción", description: "Quiero ascender en mi trabajo actual" },
-            { value: "project", label: "🚀 Proyecto personal", description: "Quiero construir mi propio proyecto" }
-        ]
-    },
-    {
-        id: 5,
-        title: "¿En cuánto tiempo quieres lograrlo?",
-        subtitle: "Establece un plazo realista para tus metas",
-        type: "single",
-        fieldName: "deadline",
-        options: [
-            { value: "3", label: "📅 3 meses", description: "Acelerado e intenso" },
-            { value: "6", label: "📅 6 meses", description: "Balanceado y sostenible" },
-            { value: "12", label: "📅 1 año", description: "Profundo y completo" }
-        ]
-    }
-];
+    var chatState = {
+        messages: [{ role: 'assistant', content: WELCOME_GROQ }],
+        loading: false
+    };
 
-// Estado global del onboarding
-let currentQuestion = 0;
-let userAnswers = {};
-let currentPlanId = null;
-
-/**
- * Inicializa el flujo de onboarding
- */
-function initOnboarding() {
-    // Verificar autenticación
-    if (!auth.isAuthenticated()) {
-        router.navigate('/register');
-        return;
+    function showState(state) {
+        var chatEl = document.getElementById('onboardingChatCard');
+        var loadingEl = document.getElementById('loadingState');
+        var resultsEl = document.getElementById('resultsState');
+        var errorEl = document.getElementById('errorState');
+        [chatEl, loadingEl, resultsEl, errorEl].forEach(function(el) {
+            if (el) el.style.display = 'none';
+        });
+        if (state === 'chat' && chatEl) chatEl.style.display = 'block';
+        if (state === 'loading' && loadingEl) loadingEl.style.display = 'block';
+        if (state === 'results' && resultsEl) resultsEl.style.display = 'block';
+        if (state === 'error' && errorEl) errorEl.style.display = 'block';
     }
 
-    const user = auth.getUser();
-    
-    // 🔑 VALIDAR ORIGEN: Onboarding SOLO desde REGISTER o "Nuevo Plan"
-    const fromRegister = sessionStorage.getItem('fromRegister');
-    const creatingNewPlan = sessionStorage.getItem('creatingNewPlan');
-    
-    if (!fromRegister && !creatingNewPlan) {
-        console.log('⚠️ Acceso a onboarding no válido (no viene de REGISTER ni de Nuevo Plan)');
-        console.log('  fromRegister:', fromRegister);
-        console.log('  creatingNewPlan:', creatingNewPlan);
-        router.navigate('/dashboard');
-        return;
+    function escapeHtml(text) {
+        if (text == null) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    function nl2br(text) {
+        return escapeHtml(text || '').replace(/\n/g, '<br>');
     }
 
-    // ✅ SI ya tiene plan Y viene de REGISTER, redirigir al dashboard
-    // (el usuario podría estar recargando la página durante el onboarding)
-    if (user && user.has_plan && fromRegister) {
-        console.log('⚠️ Usuario ya tiene plan (recarga durante onboarding), redirigiendo al dashboard');
+    /** Renderiza mensajes con la misma estructura que el chatbot del dashboard (chatbot-msg, chatbot-msg-content) */
+    function renderOnboardingMessages() {
+        var container = document.getElementById('onboardingMessages');
+        if (!container) return;
+        container.innerHTML = '';
+        chatState.messages.forEach(function(msg) {
+            var div = document.createElement('div');
+            div.className = 'chatbot-msg chatbot-msg-' + msg.role;
+            div.setAttribute('data-role', msg.role);
+            var isAssistant = msg.role === 'assistant';
+            var content = isAssistant ? nl2br(msg.content) : escapeHtml(msg.content);
+            div.innerHTML = '<div class="chatbot-msg-content">' + (isAssistant ? '<p>' + content + '</p>' : '<p>' + content + '</p>') + '</div>';
+            container.appendChild(div);
+        });
+        container.scrollTop = container.scrollHeight;
+        var qq = document.getElementById('onboardingQuickQuestions');
+        if (qq) qq.style.display = chatState.messages.length <= 1 ? 'flex' : 'none';
+    }
+
+    function setChatLoading(loading) {
+        chatState.loading = loading;
+        var typingEl = document.getElementById('onboardingTyping');
+        if (typingEl) typingEl.style.display = loading ? 'flex' : 'none';
+        if (loading) {
+            var messages = document.getElementById('onboardingMessages');
+            if (messages) messages.scrollTop = messages.scrollHeight;
+        }
+    }
+
+    /** Envía mensaje a Groq (misma lógica que el sidebar: POST /chat/message) */
+    function sendChatMessage(text) {
+        var msg = (text || '').trim();
+        if (!msg || chatState.loading) {
+            console.log('Mensaje vacío o en estado de carga:', { msg: msg, loading: chatState.loading });
+            return;
+        }
+
+        console.log('Enviando mensaje:', msg);
+        chatState.messages.push({ role: 'user', content: msg });
+        renderOnboardingMessages();
+        setChatLoading(true);
+
+        function done(responseText) {
+            chatState.messages.push({ role: 'assistant', content: responseText });
+            renderOnboardingMessages();
+            setChatLoading(false);
+        }
+        function fail(errMsg) {
+            chatState.messages.push({ role: 'assistant', content: errMsg || 'No pude procesar tu mensaje. Inténtalo de nuevo.' });
+            renderOnboardingMessages();
+            setChatLoading(false);
+        }
+
+        if (!API_BASE) {
+            console.error('API_BASE no configurado:', API_BASE);
+            fail('Backend no configurado (API_BASE_URL). Configura el servidor para usar Groq.');
+            return;
+        }
+
+        console.log('Haciendo fetch a:', API_BASE + '/chat/message');
+        fetch(API_BASE + '/chat/message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg })
+        })
+            .then(function(res) {
+                console.log('Respuesta del servidor:', res.status, res.ok);
+                return res.json().then(function(data) {
+                    if (!res.ok) {
+                        var detail = data.detail;
+                        var msg = typeof detail === 'string' ? detail : (Array.isArray(detail) ? (detail[0] && detail[0].msg) || JSON.stringify(detail) : 'Error ' + res.status);
+                        throw new Error(msg || 'Error en el servidor');
+                    }
+                    return data;
+                }).catch(function(e) {
+                    if (e instanceof Error && e.message) throw e;
+                    throw new Error('Error ' + res.status);
+                });
+            })
+            .then(function(data) {
+                console.log('Datos recibidos:', data);
+                done(data.message || 'Sin respuesta');
+            })
+            .catch(function(err) {
+                console.error('Onboarding chat (Groq):', err);
+                fail(err && err.message ? err.message : 'No se pudo conectar. ¿Está el backend en ' + API_BASE + '?');
+            });
+    }
+
+    function savePlanAndUser(planPayload) {
+        var raw = planPayload.generated_plan || planPayload.plan_content || planPayload;
+        var planContent = typeof raw === 'string' ? (function() { try { return JSON.parse(raw); } catch (e) { return raw; } })() : raw;
+        var supaUser = window.supabase && window.supabase.getCurrentUser ? window.supabase.getCurrentUser() : null;
+        if (!supaUser || !supaUser.id) {
+            console.error('Usuario Supabase no disponible para guardar plan');
+            return;
+        }
+        if (typeof planService === 'undefined' || !planService || !planService.savePlan) {
+            console.error('PlanService no disponible');
+            return;
+        }
+        planService.savePlan(supaUser.id, planContent, { source: 'onboarding-chat' })
+            .then(function(res) {
+                if (!res || !res.success) {
+                    throw new Error('Error al guardar el plan en Supabase');
+                }
+                console.log('Plan guardado en Supabase con id:', res.plan.id);
+                window.auth && window.auth.markOnboardingComplete(supaUser.id);
+            })
+            .catch(function(err) {
+                console.error('Error guardando plan en Supabase:', err);
+            });
+    }
+
+    function goToDashboard() {
         sessionStorage.removeItem('fromRegister');
-        router.navigate('/dashboard');
-        return;
+        sessionStorage.removeItem('creatingNewPlan');
+        if (window.router) window.router.navigate('/dashboard');
+        else if (window.location.hash) window.location.hash = '#/dashboard';
+        else window.location.href = '../index.html#/dashboard';
     }
 
-    console.log('✅ Iniciando onboarding para:', user.name);
-    console.log('  Origen: ', fromRegister ? 'REGISTER' : 'Nuevo Plan');
-    renderQuestion();
-}
+    /** Genera el plan con Groq (POST /ai/generate-plan-from-chat) usando el último mensaje del usuario o todos */
+    function generatePlanFromConversation() {
+        var userMessages = chatState.messages.filter(function(m) { return m.role === 'user'; }).map(function(m) { return m.content; });
+        var messageToSend = userMessages.length > 0 ? (userMessages.length === 1 ? userMessages[0] : userMessages.join(' | ')) : '';
+        if (!messageToSend.trim()) {
+            if (window.showNotification) window.showNotification('Escribe al menos un mensaje sobre qué quieres estudiar antes de generar el plan.', 'warning');
+            else alert('Escribe al menos un mensaje sobre qué quieres estudiar antes de generar el plan.');
+            return;
+        }
 
-/**
- * Renderiza la pregunta actual
- */
-function renderQuestion() {
-    const question = questions[currentQuestion];
-    const questionTitle = document.getElementById('questionTitle');
-    const questionSubtitle = document.getElementById('questionSubtitle');
-    const questionContent = document.getElementById('questionContent');
+        showState('loading');
+        function onError(err) {
+            console.error('Error generando plan:', err);
+            showState('error');
+            var errMsg = document.getElementById('errorMessage');
+            if (errMsg) errMsg.textContent = (err && err.message) || (typeof err === 'string' ? err : 'No se pudo generar el plan.');
+        }
 
-    questionTitle.textContent = `Pregunta ${currentQuestion + 1} de ${questions.length}`;
-    questionSubtitle.textContent = question.subtitle;
+        if (!API_BASE) {
+            onError(new Error('Backend no configurado (API_BASE_URL).'));
+            return;
+        }
 
-    // Actualizar progress bar
-    updateProgress();
-
-    // Renderizar contenido según el tipo
-    if (question.type === 'single') {
-        questionContent.innerHTML = renderSingleOptions(question);
-    } else if (question.type === 'multiple') {
-        questionContent.innerHTML = renderMultipleOptions(question);
-    } else if (question.type === 'text') {
-        questionContent.innerHTML = renderTextQuestion(question);
+        fetch(API_BASE + '/ai/generate-plan-from-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: messageToSend })
+        })
+            .then(function(res) {
+                return res.json().then(function(data) {
+                    if (!res.ok) {
+                        var d = data.detail || data.message;
+                        throw new Error(typeof d === 'string' ? d : (Array.isArray(d) ? (d[0] && d[0].msg) || JSON.stringify(d) : 'Error ' + res.status));
+                    }
+                    return data;
+                });
+            })
+            .then(function(data) {
+                savePlanAndUser(data);
+                var titleEl = document.getElementById('planTitle');
+                if (titleEl) titleEl.textContent = data.title || 'Tu plan de carrera';
+                showState('results');
+            })
+            .catch(onError);
     }
 
-    // Actualizar botones
-    updateButtons();
+    function initOnboarding() {
+        var auth = window.auth;
+        // Sin autenticación de rutas: permitir acceso directo a onboarding.
 
-    // Restaurar respuesta previa si existe
-    restoreAnswer();
-}
+        chatState.messages = [{ role: 'assistant', content: WELCOME_GROQ }];
+        chatState.loading = false;
+        showState('chat');
+        renderOnboardingMessages();
 
-/**
- * Renderiza opciones de selección única
- */
-function renderSingleOptions(question) {
-    return question.options
-        .map(
-            (option) => `
-        <div class="option-card" onclick="selectOption('${option.value}', 'single')">
-            <div class="option-radio">
-                <input type="radio" name="question${question.id}" value="${option.value}" id="opt_${option.value}">
-                <label for="opt_${option.value}"></label>
-            </div>
-            <div class="option-content">
-                <div class="option-label">${option.label}</div>
-                <div class="option-description">${option.description}</div>
-            </div>
-        </div>
-    `
-        )
-        .join('');
-}
+        var input = document.getElementById('onboardingUserInput');
+        var sendChatBtn = document.getElementById('onboardingSendChatBtn');
+        var generatePlanBtn = document.getElementById('onboardingGeneratePlanBtn');
+        var goBtn = document.getElementById('goToDashboardBtn');
+        var retryBtn = document.getElementById('retryBtn');
 
-/**
- * Renderiza opciones de selección múltiple
- */
-function renderMultipleOptions(question) {
-    return question.options
-        .map(
-            (option) => `
-        <div class="option-card" onclick="selectOption('${option.value}', 'multiple')">
-            <div class="option-checkbox">
-                <input type="checkbox" name="question${question.id}" value="${option.value}" id="opt_${option.value}">
-                <label for="opt_${option.value}"></label>
-            </div>
-            <div class="option-content">
-                <div class="option-label">${option.label}</div>
-                <div class="option-description">${option.description}</div>
-            </div>
-        </div>
-    `
-        )
-        .join('');
-}
-
-/**
- * Renderiza pregunta de texto libre
- */
-function renderTextQuestion(question) {
-    const answer = userAnswers[question.fieldName] || '';
-    return `
-        <div class="text-question">
-            <textarea 
-                id="textAnswer" 
-                placeholder="${question.placeholder || 'Escribe tu respuesta...'}"
-                rows="4"
-                onchange="saveTextAnswer()"
-            >${answer}</textarea>
-        </div>
-    `;
-}
-
-/**
- * Selecciona una opción (single o multiple)
- */
-function selectOption(value, type) {
-    const question = questions[currentQuestion];
-
-    if (type === 'single') {
-        // Deseleccionar todas las opciones
-        document.querySelectorAll('.option-card').forEach((card) => {
-            card.classList.remove('selected');
+        console.log('Elementos encontrados:', {
+            input: !!input,
+            sendChatBtn: !!sendChatBtn,
+            generatePlanBtn: !!generatePlanBtn,
+            goBtn: !!goBtn,
+            retryBtn: !!retryBtn
         });
 
-        // Seleccionar la opción actual
-        const currentCard = event.currentTarget;
-        currentCard.classList.add('selected');
-
-        // Marcar el radio button
-        const radio = currentCard.querySelector('input[type="radio"]');
-        if (radio) radio.checked = true;
-
-        userAnswers[question.fieldName] = value;
-        console.log(`✅ Respondido: ${question.fieldName} = ${value}`);
-    } else if (type === 'multiple') {
-        const currentCard = event.currentTarget;
-        currentCard.classList.toggle('selected');
-
-        const checkbox = currentCard.querySelector('input[type="checkbox"]');
-        if (checkbox) checkbox.checked = !checkbox.checked;
-
-        // Guardar array de valores seleccionados
-        const selected = Array.from(
-            document.querySelectorAll('.option-card.selected input[type="checkbox"]')
-        ).map((cb) => cb.value);
-
-        userAnswers[question.fieldName] = selected;
-        console.log(`✅ Respondido: ${question.fieldName} =`, selected);
-    }
-}
-
-/**
- * Guarda respuesta de texto
- */
-function saveTextAnswer() {
-    const question = questions[currentQuestion];
-    const textarea = document.getElementById('textAnswer');
-    userAnswers[question.fieldName] = textarea.value;
-    console.log(`✅ Respondido: ${question.fieldName} = ${textarea.value}`);
-}
-
-/**
- * Restaura respuesta anterior si existe
- */
-function restoreAnswer() {
-    const question = questions[currentQuestion];
-    const answer = userAnswers[question.fieldName];
-
-    if (!answer) return;
-
-    if (question.type === 'single') {
-        const radio = document.querySelector(`input[value="${answer}"]`);
-        if (radio) {
-            radio.checked = true;
-            radio.closest('.option-card').classList.add('selected');
+        if (sendChatBtn && input) {
+            console.log('Asignando evento click al botón de enviar');
+            sendChatBtn.addEventListener('click', function(e) {
+                console.log('Botón de enviar clickeado');
+                e.preventDefault();
+                var message = input.value.trim();
+                if (message) {
+                    sendChatMessage(message);
+                    input.value = '';
+                } else {
+                    console.log('Mensaje vacío, no se envía');
+                }
+            });
+        } else {
+            console.log('No se encontraron elementos para asignar evento:', { sendChatBtn: !!sendChatBtn, input: !!input });
         }
-    } else if (question.type === 'multiple') {
-        if (Array.isArray(answer)) {
-            answer.forEach((value) => {
-                const checkbox = document.querySelector(`input[value="${value}"]`);
-                if (checkbox) {
-                    checkbox.checked = true;
-                    checkbox.closest('.option-card').classList.add('selected');
+        if (input) {
+            console.log('Asignando evento keydown al input');
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    console.log('Tecla Enter presionada');
+                    e.preventDefault();
+                    var message = input.value.trim();
+                    if (message) {
+                        sendChatMessage(message);
+                        input.value = '';
+                    } else {
+                        console.log('Mensaje vacío, no se envía');
+                    }
                 }
             });
         }
-    } else if (question.type === 'text') {
-        const textarea = document.getElementById('textAnswer');
-        if (textarea) textarea.value = answer;
-    }
-}
+        if (generatePlanBtn) generatePlanBtn.addEventListener('click', generatePlanFromConversation);
+        if (goBtn) goBtn.addEventListener('click', goToDashboard);
+        if (retryBtn) retryBtn.addEventListener('click', function() { showState('chat'); });
 
-/**
- * Actualiza barra de progreso
- */
-function updateProgress() {
-    const progressFill = document.getElementById('progressFill');
-    const progressSteps = document.querySelectorAll('.step');
-    const progress = ((currentQuestion + 1) / questions.length) * 100;
-
-    progressFill.style.width = `${progress}%`;
-
-    progressSteps.forEach((step, index) => {
-        if (index < currentQuestion) {
-            step.classList.add('active');
-        } else if (index === currentQuestion) {
-            step.classList.add('active');
-        } else {
-            step.classList.remove('active');
-        }
-    });
-}
-
-/**
- * Actualiza estado de botones
- */
-function updateButtons() {
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const generateBtn = document.getElementById('generateBtn');
-
-    if (currentQuestion > 0) {
-        prevBtn.style.display = 'block';
-    } else {
-        prevBtn.style.display = 'none';
-    }
-
-    if (currentQuestion === questions.length - 1) {
-        nextBtn.style.display = 'none';
-        generateBtn.style.display = 'block';
-    } else {
-        nextBtn.style.display = 'block';
-        generateBtn.style.display = 'none';
-    }
-}
-
-/**
- * Ir a la siguiente pregunta
- */
-function nextQuestion() {
-    // Validar que la pregunta actual esté respondida
-    const question = questions[currentQuestion];
-    const answer = userAnswers[question.fieldName];
-
-    if (!answer || (Array.isArray(answer) && answer.length === 0)) {
-        showNotification('Por favor responde la pregunta antes de continuar', 'warning');
-        return;
-    }
-
-    if (currentQuestion < questions.length - 1) {
-        currentQuestion++;
-        renderQuestion();
-    }
-}
-
-/**
- * Volver a la pregunta anterior
- */
-function previousQuestion() {
-    if (currentQuestion > 0) {
-        currentQuestion--;
-        renderQuestion();
-    }
-}
-
-/**
- * Genera el plan con IA y lo guarda
- */
-async function generatePlan() {
-    // Validar que todas las preguntas estén respondidas
-    for (let i = 0; i < questions.length; i++) {
-        const question = questions[i];
-        const answer = userAnswers[question.fieldName];
-        if (!answer || (Array.isArray(answer) && answer.length === 0)) {
-            currentQuestion = i;
-            renderQuestion();
-            showNotification('Por favor responde todas las preguntas antes de continuar', 'warning');
-            return;
+        var quickQuestions = document.getElementById('onboardingQuickQuestions');
+        if (quickQuestions) {
+            quickQuestions.querySelectorAll('.btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var q = this.getAttribute('data-question');
+                    if (q) { sendChatMessage(q); }
+                });
+            });
         }
     }
 
-    // Mostrar loading
-    document.getElementById('questionCard').style.display = 'none';
-    document.getElementById('loadingState').style.display = 'block';
-
-    try {
-        console.log('📝 Enviando respuestas a Claude IA:', userAnswers);
-
-        // Llamar a AIService para generar el plan
-        if (!aiService.isConfigured) {
-            throw new Error(
-                'Claude API no está configurada. Por favor configura VITE_ANTHROPIC_API_KEY'
-            );
-        }
-
-        // Generar plan con IA
-        const result = await aiService.generateCareerPlan(userAnswers);
-
-        if (!result.success) {
-            throw new Error('Error generando plan');
-        }
-
-        const generatedPlan = result.plan;
-        console.log('✅ Plan generado por IA:', generatedPlan);
-
-        // Guardar plan en Supabase
-        const user = auth.getUser();
-        if (user && planService) {
-            const saveResult = await planService.savePlan(user.id, generatedPlan, userAnswers);
-            currentPlanId = saveResult.plan.id;
-            console.log('✅ Plan guardado en BD:', currentPlanId);
-        } else {
-            console.warn('⚠️ Guardando plan en localStorage');
-            const planWithId = { ...generatedPlan, id: 'local-' + Date.now(), created_at: new Date().toISOString() };
-            currentPlanId = planWithId.id;
-            localStorage.setItem('currentPlan', JSON.stringify(planWithId));
-        }
-
-        // ✅ Marcar que el usuario YA TIENE PLAN + GUARDAR EN ARRAY DE PLANES
-        if (user) {
-            // Asegurar que plans sea un array
-            if (!user.plans) {
-                user.plans = [];
-            }
-            
-            // Agregar el nuevo plan al array
-            const planWithId = {
-                ...generatedPlan,
-                id: currentPlanId || `plan-${Date.now()}`,
-                createdAt: new Date().toISOString()
-            };
-            user.plans.push(planWithId);
-            
-            // Mantener compatibilidad: también guardar como plan principal
-            user.has_plan = true;
-            user.plan = planWithId;
-            
-            localStorage.setItem('user', JSON.stringify(user));
-            console.log('✅ Usuario marcado como has_plan=true');
-            console.log('✅ Plan agregado al array de planes. Total:', user.plans.length);
-        }
-
-        // Marcar onboarding como completado solo si viene del REGISTER (primer plan).
-        // Si viene de "Nuevo Plan Carrera", el usuario ya tenía onboarding completado; no sobrescribir.
-        const creatingNewPlan = sessionStorage.getItem('creatingNewPlan');
-        if (user && !creatingNewPlan) {
-            await auth.markOnboardingComplete(user.id);
-        }
-
-        // Mostrar resultados
-        setTimeout(() => {
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('resultsState').style.display = 'block';
-            document.getElementById('planTitle').textContent = generatedPlan.title;
-            document.getElementById('planDescription').textContent = generatedPlan.description;
-        }, 1500);
-    } catch (error) {
-        console.error('❌ Error generando plan:', error);
-        document.getElementById('loadingState').style.display = 'none';
-        document.getElementById('errorState').style.display = 'block';
-        document.getElementById('errorMessage').textContent = error.message;
-    }
-}
-
-/**
- * Intenta generar el plan de nuevo
- */
-function retryGeneration() {
-    document.getElementById('errorState').style.display = 'none';
-    document.getElementById('questionCard').style.display = 'block';
-    currentQuestion = questions.length - 1;
-    renderQuestion();
-}
-
-/**
- * Navega al dashboard
- */
-function goToDashboard() {
-    // 🔑 LIMPIAR BANDERAS DE ONBOARDING al terminar
-    sessionStorage.removeItem('fromRegister');
-    sessionStorage.removeItem('creatingNewPlan');
+    // Exponer la función para que la llame el router
+    window.initOnboarding = initOnboarding;
     
-    console.log('✅ Onboarding completado, banderas limpiadas');
-    router.navigate('/dashboard');
-}
-
-/**
- * Muestra notificación
- */
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
-
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            if (document.body.contains(notification)) {
-                document.body.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
-}
-
-// Iniciar onboarding cuando se cargue
-document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar automáticamente si el DOM está listo
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initOnboarding);
     } else {
         initOnboarding();
     }
-});
-
-// Fallback si el DOM ya se cargó
-if (document.readyState !== 'loading') {
-    initOnboarding();
-}
-// Inicializar cuando se carga la página
-document.addEventListener('DOMContentLoaded', initOnboarding);
+})();
 </script>
+</body>
+</html>

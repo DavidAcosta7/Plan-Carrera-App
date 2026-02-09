@@ -3,10 +3,12 @@
   "buildCommand": null,
   "outputDirectory": ".",
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/dashboard/(.*)", "destination": "/index.html" },
+    { "source": "/onboarding", "destination": "/index.html" },
+    { "source": "/login", "destination": "/index.html" },
+    { "source": "/register", "destination": "/index.html" },
+    { "source": "/", "destination": "/index.html" }
   ],
   "headers": [
     {

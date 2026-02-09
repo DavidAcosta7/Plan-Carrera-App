@@ -29,32 +29,21 @@ class PlanService {
                 description: plan.description,
                 objective: plan.objective || '',
                 estimated_duration: plan.estimatedDuration || '',
-                total_phases: plan.totalPhases || plan.phases?.length || 0,
+                total_phases: plan.totalPhases || (plan.phases && plan.phases.length) || 0,
                 plan_content: JSON.stringify(plan),
-                user_answers: JSON.stringify(userAnswers),
+                user_answers: JSON.stringify(userAnswers || {}),
                 status: 'active',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
-                is_primary: false // Todos los planes iguales; no hay "plan activo" por usuario
+                is_primary: false
             };
 
-            const response = await this.supabase
-                .from(this.tableName)
-                .insert([planData])
-                .select();
-
-            if (response.error) {
-                throw new Error(`Error saving plan: ${response.error.message}`);
+            const response = await this.supabase.post(this.tableName, planData);
+            if (!response.success) {
+                throw new Error(response.error || 'Error al guardar plan');
             }
-
-            // Regla de producto: todos los planes se tratan igual. No existe "plan activo" ni plan primario.
-            // No se establece is_primary para evitar lógica de "plan único" por usuario.
-
-            return {
-                success: true,
-                plan: response.data[0],
-                message: 'Plan guardado exitosamente'
-            };
+            const saved = Array.isArray(response.data) ? response.data[0] : response.data;
+            return { success: true, plan: saved, message: 'Plan guardado exitosamente' };
         } catch (error) {
             console.error('Error en savePlan:', error);
             throw error;
@@ -68,23 +57,15 @@ class PlanService {
      */
     async getUserPlans(userId) {
         try {
-            const response = await this.supabase
-                .from(this.tableName)
-                .select('*')
-                .eq('user_id', userId)
-                .eq('status', 'active')
-                .order('created_at', { ascending: false });
-
-            if (response.error) {
-                throw new Error(`Error fetching plans: ${response.error.message}`);
+            const response = await this.supabase.get(this.tableName, { where: { user_id: userId }, select: '*' });
+            if (!response.success) {
+                throw new Error(response.error || 'Error al obtener planes');
             }
-
-            // Parsear plan_content
-            return response.data?.map(plan => ({
-                ...plan,
-                plan_content: JSON.parse(plan.plan_content || '{}'),
-                user_answers: JSON.parse(plan.user_answers || '{}')
-            })) || [];
+            return (response.data || []).map(p => ({
+                ...p,
+                plan_content: JSON.parse(p.plan_content || '{}'),
+                user_answers: JSON.parse(p.user_answers || '{}')
+            }));
         } catch (error) {
             console.error('Error en getUserPlans:', error);
             throw error;
@@ -98,27 +79,15 @@ class PlanService {
      */
     async getPrimaryPlan(userId) {
         try {
-            const response = await this.supabase
-                .from(this.tableName)
-                .select('*')
-                .eq('user_id', userId)
-                .eq('is_primary', true)
-                .eq('status', 'active')
-                .single();
-
-            if (response.error && response.error.code !== 'PGRST116') {
-                throw new Error(`Error fetching primary plan: ${response.error.message}`);
-            }
-
-            if (response.data) {
-                return {
-                    ...response.data,
-                    plan_content: JSON.parse(response.data.plan_content || '{}'),
-                    user_answers: JSON.parse(response.data.user_answers || '{}')
-                };
-            }
-
-            return null;
+            const response = await this.supabase.get(this.tableName, { where: { user_id: userId, is_primary: true }, select: '*' });
+            if (!response.success) return null;
+            const data = Array.isArray(response.data) ? response.data[0] : response.data;
+            if (!data) return null;
+            return {
+                ...data,
+                plan_content: JSON.parse(data.plan_content || '{}'),
+                user_answers: JSON.parse(data.user_answers || '{}')
+            };
         } catch (error) {
             console.error('Error en getPrimaryPlan:', error);
             throw error;
@@ -131,33 +100,12 @@ class PlanService {
      */
     async setPrimaryPlan(planId) {
         try {
-            // Primero, desestablece todos los planes primarios del usuario
-            const plan = await this.supabase
-                .from(this.tableName)
-                .select('user_id')
-                .eq('id', planId)
-                .single();
-
-            if (!plan.data) {
-                throw new Error('Plan not found');
-            }
-
-            // Desactivar primarios anteriores
-            await this.supabase
-                .from(this.tableName)
-                .update({ is_primary: false })
-                .eq('user_id', plan.data.user_id);
-
-            // Establecer este como primario
-            const response = await this.supabase
-                .from(this.tableName)
-                .update({ is_primary: true })
-                .eq('id', planId);
-
-            if (response.error) {
-                throw new Error(`Error setting primary plan: ${response.error.message}`);
-            }
-
+            const owner = await this.supabase.get(this.tableName, { where: { id: planId }, select: 'user_id' });
+            if (!owner.success || !owner.data || !owner.data[0]) throw new Error('Plan not found');
+            const userId = owner.data[0].user_id;
+            await this.supabase.update(this.tableName, 'all-by-user', { is_primary: false, user_id: userId });
+            const response = await this.supabase.update(this.tableName, planId, { is_primary: true });
+            if (!response.success) throw new Error(response.error || 'Error setting primary plan');
             return { success: true };
         } catch (error) {
             console.error('Error en setPrimaryPlan:', error);
@@ -172,21 +120,15 @@ class PlanService {
      */
     async getPlanById(planId) {
         try {
-            const response = await this.supabase
-                .from(this.tableName)
-                .select('*')
-                .eq('id', planId)
-                .eq('status', 'active')
-                .single();
-
-            if (response.error) {
-                throw new Error(`Error fetching plan: ${response.error.message}`);
+            const response = await this.supabase.get(this.tableName, { where: { id: planId }, select: '*' });
+            if (!response.success || !response.data || !response.data[0]) {
+                throw new Error(response.error || 'Plan no encontrado');
             }
-
+            const data = response.data[0];
             return {
-                ...response.data,
-                plan_content: JSON.parse(response.data.plan_content || '{}'),
-                user_answers: JSON.parse(response.data.user_answers || '{}')
+                ...data,
+                plan_content: JSON.parse(data.plan_content || '{}'),
+                user_answers: JSON.parse(data.user_answers || '{}')
             };
         } catch (error) {
             console.error('Error en getPlanById:', error);
@@ -201,25 +143,12 @@ class PlanService {
      */
     async updatePlan(planId, updates) {
         try {
-            const updateData = {
-                ...updates,
-                updated_at: new Date().toISOString()
-            };
-
-            // Si se actualiza plan_content, stringificarlo
+            const updateData = { ...updates, updated_at: new Date().toISOString() };
             if (updates.plan_content && typeof updates.plan_content === 'object') {
                 updateData.plan_content = JSON.stringify(updates.plan_content);
             }
-
-            const response = await this.supabase
-                .from(this.tableName)
-                .update(updateData)
-                .eq('id', planId);
-
-            if (response.error) {
-                throw new Error(`Error updating plan: ${response.error.message}`);
-            }
-
+            const response = await this.supabase.update(this.tableName, planId, updateData);
+            if (!response.success) throw new Error(response.error || 'Error al actualizar plan');
             return { success: true };
         } catch (error) {
             console.error('Error en updatePlan:', error);
@@ -233,15 +162,8 @@ class PlanService {
      */
     async deletePlan(planId) {
         try {
-            const response = await this.supabase
-                .from(this.tableName)
-                .update({ status: 'deleted', updated_at: new Date().toISOString() })
-                .eq('id', planId);
-
-            if (response.error) {
-                throw new Error(`Error deleting plan: ${response.error.message}`);
-            }
-
+            const response = await this.supabase.update(this.tableName, planId, { status: 'deleted', updated_at: new Date().toISOString() });
+            if (!response.success) throw new Error(response.error || 'Error eliminando plan');
             return { success: true };
         } catch (error) {
             console.error('Error en deletePlan:', error);
@@ -257,14 +179,7 @@ class PlanService {
      */
     async saveProgress(userId, planId, progress) {
         try {
-            // Verificar si ya existe progreso
-            const existing = await this.supabase
-                .from(this.progressTableName)
-                .select('id')
-                .eq('user_id', userId)
-                .eq('plan_id', planId)
-                .single();
-
+            const existing = await this.supabase.get(this.progressTableName, { where: { user_id: userId, plan_id: planId }, select: 'id' });
             const progressData = {
                 user_id: userId,
                 plan_id: planId,
@@ -273,24 +188,14 @@ class PlanService {
                 expanded_phases: JSON.stringify(progress.expandedPhases || [1]),
                 last_updated: new Date().toISOString()
             };
-
-            if (existing.data) {
-                // Actualizar
-                const response = await this.supabase
-                    .from(this.progressTableName)
-                    .update(progressData)
-                    .eq('id', existing.data.id);
-
-                if (response.error) throw response.error;
+            if (existing.success && existing.data && existing.data[0]) {
+                const id = existing.data[0].id;
+                const response = await this.supabase.update(this.progressTableName, id, progressData);
+                if (!response.success) throw new Error(response.error || 'Error al actualizar progreso');
             } else {
-                // Insertar
-                const response = await this.supabase
-                    .from(this.progressTableName)
-                    .insert([progressData]);
-
-                if (response.error) throw response.error;
+                const response = await this.supabase.post(this.progressTableName, progressData);
+                if (!response.success) throw new Error(response.error || 'Error al insertar progreso');
             }
-
             return { success: true };
         } catch (error) {
             console.error('Error en saveProgress:', error);
@@ -305,30 +210,15 @@ class PlanService {
      */
     async getProgress(userId, planId) {
         try {
-            const response = await this.supabase
-                .from(this.progressTableName)
-                .select('*')
-                .eq('user_id', userId)
-                .eq('plan_id', planId)
-                .single();
-
-            if (response.error && response.error.code === 'PGRST116') {
-                // No existe progreso, retornar default
-                return {
-                    completedPhases: [],
-                    completedProjects: [],
-                    expandedPhases: [1]
-                };
+            const response = await this.supabase.get(this.progressTableName, { where: { user_id: userId, plan_id: planId }, select: '*' });
+            if (!response.success || !response.data || !response.data[0]) {
+                return { completedPhases: [], completedProjects: [], expandedPhases: [1] };
             }
-
-            if (response.error) {
-                throw new Error(`Error fetching progress: ${response.error.message}`);
-            }
-
+            const data = response.data[0];
             return {
-                completedPhases: JSON.parse(response.data.completed_phases || '[]'),
-                completedProjects: JSON.parse(response.data.completed_projects || '[]'),
-                expandedPhases: JSON.parse(response.data.expanded_phases || '[1]')
+                completedPhases: JSON.parse(data.completed_phases || '[]'),
+                completedProjects: JSON.parse(data.completed_projects || '[]'),
+                expandedPhases: JSON.parse(data.expanded_phases || '[1]')
             };
         } catch (error) {
             console.error('Error en getProgress:', error);

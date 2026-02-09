@@ -9,201 +9,305 @@
   - NO botón "Nuevo Plan Carrera"
 -->
 
-<div class="dashboard-page dashboard-clean">
-    <!-- HEADER (misma estructura que index / styles dashboard-clean) -->
-    <header class="dashboard-header dashboard-header-clean">
-      <div class="header-content">
-        <div class="header-left">
-          <h1 class="dashboard-title">Hola, <span id="userName">Usuario</span></h1>
-          <p class="dashboard-subtitle">Tu plan de carrera</p>
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<body class="dashboard-page">
+    <header class="dashboard-header">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-gradient text-3xl font-bold mb-2">Hola, <span id="userName">Usuario</span></h1>
+          <p class="text-gray-600 text-lg">Tu plan de carrera</p>
         </div>
-        <div class="header-right">
-          <button type="button" class="btn-secondary btn-ghost" onclick="logout()">Cerrar sesión</button>
+        <div>
+          <button type="button" class="btn btn-secondary" onclick="logout()">Cerrar sesión</button>
         </div>
       </div>
     </header>
 
-    <!-- MAIN -->
-    <main class="dashboard-main dashboard-main-clean">
+    <main class="dashboard-main">
       <!-- LOADING -->
       <div class="loading-state" id="loadingState" hidden>
-        <div class="loading-content">
-          <div class="loading-spinner"></div>
-          <p>Cargando...</p>
+        <div class="card p-12 text-center">
+          <div class="animate-spin w-12 h-12 border-3 border-gray-200 border-t-primary-500 rounded-full mx-auto mb-4"></div>
+          <p class="text-gray-600 text-lg">Cargando...</p>
         </div>
       </div>
 
       <!-- PLAN CARD -->
-      <section class="plan-card-section" id="planCardSection" style="display:none;">
-        <div id="planCardContainer"></div>
+      <section class="plan-card-section" id="planCardSection" style="display:none; padding: 2rem 0;">
+        <div class="dashboard-grid" id="planCardContainer"></div>
       </section>
 
       <!-- EMPTY STATE -->
       <section class="empty-state" id="emptyState" hidden>
-        <div class="empty-content">
-          <p class="empty-message">Aún no tienes un Plan de Carrera creado.</p>
-          <p class="empty-hint">Regístrate y completa el onboarding para que la IA genere tu plan según tus opciones.</p>
+        <div class="card p-12 text-center max-w-md">
+          <div class="text-6xl mb-4">📋</div>
+          <h2 class="text-gray-800 text-2xl mb-2 font-semibold">Aún no tienes un Plan de Carrera creado.</h2>
+          <p class="text-gray-600 text-base mb-6">Completa el onboarding para que la IA genere tu plan según tus opciones.</p>
+          <a href="#/onboarding" class="btn btn-primary" data-route="/onboarding">Nuevo Plan Carrera</a>
         </div>
       </section>
 
       <!-- ERROR -->
       <div class="error-state" id="errorState" hidden>
-        <div class="error-content">
-          <p id="errorMessage"></p>
-          <button type="button" class="btn-primary" onclick="loadDashboard()">Reintentar</button>
+        <div class="card p-12 text-center max-w-md">
+          <div class="text-6xl mb-4">⚠️</div>
+          <p id="errorMessage" class="text-gray-700 text-base mb-4"></p>
+          <button type="button" class="btn btn-primary" onclick="loadDashboard()">Reintentar</button>
         </div>
       </div>
     </main>
+    <footer class="dashboard-bottom-actions" style="padding: 1.5rem 0;">
+      <div class="header-content">
+        <div></div>
+        <div style="display:flex; gap: 12px;">
+          <button type="button" class="btn btn-primary" onclick="goToPlanDetail()">Ver detalle del plan</button>
+          <button type="button" class="btn btn-secondary" onclick="goToProjects()">Ver proyectos</button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Chatbot Sidebar (Groq AI) -->
+    <div id="chatbotSidebarRoot">
+      <div class="chatbot-sidebar-overlay" id="chatbotOverlay" aria-hidden="true"></div>
+      <aside class="chat-container" id="chatbotSidebar" aria-hidden="true">
+        <header class="chat-header">
+          <div class="flex items-center gap-3">
+            <div class="avatar relative">
+              <div class="avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <span class="status-indicator"></span>
+            </div>
+            <div>
+              <h2 class="text-white text-lg font-semibold m-0">Groq AI</h2>
+              <span class="text-white opacity-90 text-sm">En línea</span>
+            </div>
+          </div>
+        </header>
+        <div class="chat-body p-6 overflow-y-auto custom-scrollbar" id="chatbotSidebarBody">
+          <div class="chat-messages" id="chatbotMessages">
+            <div class="mb-4" data-role="assistant">
+              <div class="card bg-gray-100 p-4 rounded-xl">
+                <div class="carrerbot-container" id="carrerbotMount">
+                  <div class="carrerbot-hero" aria-hidden="true">
+                    <img src="carrerbot/carrerbotdashboard.png" alt="CarrerBot" class="carrerbot-hero-img">
+                  </div>
+                </div>
+                <p class="text-gray-800 text-sm mb-2">¡Hola! 👋 Soy tu mentor (Groq AI).</p>
+                <p class="text-gray-600 text-sm">¿En qué puedo ayudarte hoy? Puedo:</p>
+                <ul class="text-gray-600 text-sm space-y-1">
+                  <li>• Resolver dudas sobre tu plan de carrera</li>
+                  <li>• Explicar conceptos técnicos</li>
+                  <li>• Revisar tu código</li>
+                  <li>• Sugerir recursos de aprendizaje</li>
+                  <li>• Motivarte en tu proceso 💪</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="chat-quick-questions p-4 flex flex-wrap gap-2" id="chatbotQuickQuestions">
+            <button type="button" class="btn btn-secondary btn-sm" data-question="¿Cómo va mi progreso?">¿Cómo va mi progreso?</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-question="Dame un consejo para hoy">Dame un consejo para hoy</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-question="Explícame un concepto de mi fase actual">Explícame un concepto de mi fase actual</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-question="¿Qué proyecto debería hacer ahora?">¿Qué proyecto debería hacer ahora?</button>
+          </div>
+          <div class="chat-typing p-4 text-center text-gray-500 text-sm" id="chatbotTyping" style="display: none;">
+            <div class="animate-spin w-5 h-5 border-2 border-gray-300 border-t-primary-500 rounded-full mx-auto mb-2"></div>
+            <span>Estoy escribiendo...</span>
+          </div>
+          <div class="chat-input-container p-4 border-t border-gray-200">
+            <input type="text" class="input" id="chatbotInput" placeholder="Escribe tu mensaje..." autocomplete="off" />
+            <button type="button" class="btn btn-primary" id="chatbotSendBtn" title="Enviar" aria-label="Enviar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </aside>
+      <button type="button" class="chatbot-float-btn" id="chatbotFloatBtn" aria-label="Abrir chat con Groq AI">
+        <span class="chatbot-float-btn-pulse"></span>
+        <span class="chatbot-float-btn-inner">
+          <svg class="chatbot-float-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span class="chatbot-float-badge">!</span>
+        </span>
+        <span class="chatbot-float-tooltip">Hablar con Groq AI 💬</span>
+      </button>
+    </div>
 </div>
-  
-  <script>
-  /*
+
+<script>
+/*
     Dashboard logic
     - 1 usuario = 1 plan
-    - El plan proviene del onboarding (IA)
-  */
-  
-  let currentPlan = null;
-  
-  function loadDashboard() {
+    - El plan proviene del onboarding (IA Groq, backend)
+*/
+
+let currentPlan = null;
+
+function loadDashboard() {
     try {
-      if (!auth || !auth.isAuthenticated()) {
-        router.navigate('/login');
-        return;
-      }
-  
-      const user = auth.getUser();
-      document.getElementById('userName').textContent =
-        user.name || user.email || 'Usuario';
-  
-      showState('loading');
-  
-      // Un solo plan por usuario: getUserPlans devuelve array; tomamos el primero
-      function finish(plan) {
-        currentPlan = plan || null;
-        if (currentPlan) {
-          if (!currentPlan.id) currentPlan.id = 'local-' + (currentPlan.created_at ? new Date(currentPlan.created_at).getTime() : Date.now());
-          renderPlanCard(currentPlan);
-          showState('plan');
-        } else {
-          showState('empty');
+        const supaUser = window.supabase.getCurrentUser();
+        const userName = (supaUser && (supaUser.user_metadata?.name || supaUser.email?.split('@')[0])) || 'Usuario';
+        document.getElementById('userName').textContent = userName;
+
+        showState('loading');
+
+        // Un solo plan por usuario: getUserPlans devuelve array; tomar el primero
+        function finish(plan) {
+            currentPlan = plan || null;
+            if (currentPlan) {
+                if (!currentPlan.id) currentPlan.id = 'local-' + (currentPlan.created_at ? new Date(currentPlan.created_at).getTime() : Date.now());
+                renderPlanCard(currentPlan);
+                showState('plan');
+            } else {
+                showState('empty');
+            }
         }
-      }
-  
-      if (typeof planService !== 'undefined' && planService && planService.getUserPlans) {
-        planService.getUserPlans(user.id)
-          .then(plans => finish(plans && plans.length ? plans[0] : null))
-          .catch(() => {
-            try {
-              const saved = localStorage.getItem('currentPlan');
-              finish(saved ? JSON.parse(saved) : null);
-            } catch (e) { finish(null); }
-          });
-      } else {
-        try {
-          const saved = localStorage.getItem('currentPlan');
-          finish(saved ? JSON.parse(saved) : null);
-        } catch (e) { finish(null); }
-      }
-  
+
+        if (typeof planService !== 'undefined' && planService && planService.getUserPlans && supaUser && supaUser.id) {
+            planService.getUserPlans(supaUser.id)
+                .then(plans => finish(plans && plans.length ? plans[0] : null))
+                .catch(() => { finish(null); });
+        } else {
+            finish(null);
+        }
+
     } catch (err) {
-      console.error(err);
-      showError('Error inesperado al cargar el dashboard');
+        console.error(err);
+        showError('Error inesperado al cargar el dashboard');
     }
-  }
-  
-  function renderPlanCard(plan) {
+}
+
+function renderPlanCard(plan) {
     const container = document.getElementById('planCardContainer');
     if (!container) return;
 
     const content = typeof plan.plan_content === 'string'
-      ? (() => { try { return JSON.parse(plan.plan_content); } catch (e) { return {}; } })()
-      : (plan.plan_content || plan);
-    const title = plan.title || content.title || 'Plan de carrera';
+        ? (() => { try { return JSON.parse(plan.plan_content); } catch (e) { return {}; } })()
+        : (plan.plan_content || plan);
+    const title = plan.title || content.plan_title || content.title || 'Plan de carrera';
     const description = plan.description || content.description || '';
     const objective = plan.objective || content.objective || '';
-    const deadline = plan.estimated_duration || content.estimatedDuration || content.estimated_duration || '';
+    const totalWeeks = content.total_weeks || plan.timeline_weeks;
+    const deadline = plan.estimated_duration || content.estimated_duration ||
+        (totalWeeks ? totalWeeks + ' semanas' : '');
     const created = plan.created_at ? formatDate(plan.created_at) : '';
+    const phaseCount = (content.phases && content.phases.length) || 0;
     let what = description;
     if (!what && content.phases && content.phases.length > 0) {
-      const t = content.phases[0].topics || content.phases[0].learning_objectives || [];
-      what = t.slice(0, 3).join(', ');
+        const first = content.phases[0];
+        const t = first.learning_items || first.topics || first.learning_objectives || [];
+        what = t.slice(0, 3).join(', ');
     }
 
     container.innerHTML = `
-      <article class="plan-career-card" onclick="openPlan('${escapeAttr(plan.id)}')" role="button" tabindex="0">
-        <h2 class="plan-career-card-title">${escapeHtml(title)}</h2>
-        ${what ? `<p class="plan-career-card-field"><span class="label">Qué vas a estudiar</span>${escapeHtml(what)}</p>` : ''}
-        ${objective ? `<p class="plan-career-card-field"><span class="label">Objetivo principal</span>${escapeHtml(objective)}</p>` : ''}
-        ${deadline ? `<p class="plan-career-card-field"><span class="label">Plazo estimado</span>${escapeHtml(deadline)}</p>` : ''}
-        ${created ? `<p class="plan-career-card-field plan-career-card-date"><span class="label">Fecha de creación</span>${escapeHtml(created)}</p>` : ''}
-        <p class="plan-career-card-cta">Ver detalle del plan →</p>
+      <article class="dashboard-metric" onclick="openPlan('${escapeAttr(plan.id)}')" role="button" tabindex="0">
+        <div class="dashboard-metric-icon">📋</div>
+        <div class="dashboard-metric-value">${escapeHtml(title)}</div>
+        <div class="dashboard-metric-label">Tu plan de carrera</div>
+        ${what ? `<div class="dashboard-metric-label mt-2">¿Qué vas a estudiar: ${escapeHtml(what)}</div>` : ''}
+        ${objective ? `<div class="dashboard-metric-label mt-2">Objetivo: ${escapeHtml(objective)}</div>` : ''}
+        ${deadline ? `<div class="dashboard-metric-label mt-2">Duración: ${escapeHtml(deadline)}</div>` : ''}
+        ${created ? `<div class="dashboard-metric-label mt-2">Creado: ${escapeHtml(created)}</div>` : ''}
+        <div class="dashboard-metric-progress mt-4">
+          <div class="dashboard-metric-progress-bar" style="width: 25%"></div>
+        </div>
+        <div class="dashboard-metric-label mt-2">Ver detalle del plan →</div>
+      </article>
+      <article class="dashboard-metric" onclick="window.router.navigate('/projects')" role="button" tabindex="0">
+        <div class="dashboard-metric-icon">🚀</div>
+        <div class="dashboard-metric-value">Proyectos</div>
+        <div class="dashboard-metric-label">Ver y gestionar tus proyectos</div>
+      </article>
+      <article class="dashboard-metric" onclick="window.router.navigate('/onboarding')" role="button" tabindex="0">
+        <div class="dashboard-metric-icon">🤖</div>
+        <div class="dashboard-metric-value">Crear Plan</div>
+        <div class="dashboard-metric-label">Generar nuevo plan con IA</div>
       </article>
     `;
-  }
+}
 
-  function escapeAttr(text) {
+function escapeAttr(text) {
     if (text == null) return '';
     return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-  
-  function openPlan(planId) {
-    router.navigate(`/dashboard/plan/${planId}`);
-  }
-  
-  /* =====================
-     Helpers
-  ===================== */
-  
-  function showState(state) {
-    const loadingEl = document.getElementById('loadingState');
-    const emptyEl = document.getElementById('emptyState');
-    const planSection = document.getElementById('planCardSection');
-    const errorEl = document.getElementById('errorState');
+}
 
-    loadingEl?.setAttribute('hidden', '');
-    emptyEl?.setAttribute('hidden', '');
-    errorEl?.setAttribute('hidden', '');
-    if (planSection) {
-      planSection.setAttribute('hidden', '');
-      planSection.style.display = 'none';
-    }
-
-    if (state === 'plan') {
-      if (planSection) {
-        planSection.removeAttribute('hidden');
-        planSection.style.display = 'block';
-      }
-    } else {
-      const id = state === 'loading' ? 'loadingState' : state === 'empty' ? 'emptyState' : 'errorState';
-      document.getElementById(id)?.removeAttribute('hidden');
-    }
-  }
-  
-  function showError(message) {
-    document.getElementById('errorMessage').textContent = message;
-    showState('error');
-  }
-  
-  function formatDate(date) {
-    return new Date(date).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
     });
-  }
-  
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text || '';
-    return div.innerHTML;
-  }
-  
-  function logout() {
-    auth.logout();
-    router.navigate('/');
-  }
-  
-  document.addEventListener('DOMContentLoaded', loadDashboard);
-  </script>
-  
+}
+
+function showState(state) {
+    const loadingEl = document.getElementById('loadingState');
+    const planEl = document.getElementById('planCardSection');
+    const emptyEl = document.getElementById('emptyState');
+    const errorEl = document.getElementById('errorState');
+    
+    [loadingEl, planEl, emptyEl, errorEl].forEach(el => {
+        if (el) el.style.display = 'none';
+    });
+    
+    if (state === 'loading' && loadingEl) loadingEl.style.display = 'block';
+    if (state === 'plan' && planEl) planEl.style.display = 'block';
+    if (state === 'empty' && emptyEl) emptyEl.style.display = 'block';
+    if (state === 'error' && errorEl) errorEl.style.display = 'block';
+}
+
+function showError(message) {
+    const errorEl = document.getElementById('errorState');
+    const messageEl = document.getElementById('errorMessage');
+    if (messageEl) messageEl.textContent = message;
+    showState('error');
+}
+
+function openPlan(planId) {
+    if (window.router) {
+        window.router.navigate(`/dashboard/plan/${planId}`);
+    } else if (window.location.hash) {
+        window.location.hash = `#/dashboard/plan/${planId}`;
+    } else {
+        window.location.href = `index.html#/dashboard/plan/${planId}`;
+    }
+}
+
+function logout() {
+    if (window.auth && window.auth.logout) {
+        window.auth.logout();
+    }
+    if (window.router) {
+        window.router.navigate('/login');
+    } else {
+        window.location.hash = '#/login';
+    }
+}
+
+function goToPlanDetail() {
+    if (currentPlan && currentPlan.id) {
+        openPlan(currentPlan.id);
+    } else {
+        showNotification('Aún no tienes un plan creado', 'info');
+    }
+}
+
+function goToProjects() {
+    if (window.router) {
+        window.router.navigate('/projects');
+    } else {
+        window.location.hash = '#/projects';
+    }
+}
+
+// Inicializar dashboard al cargar
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>

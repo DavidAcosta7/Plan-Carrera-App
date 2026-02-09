@@ -192,24 +192,40 @@
             const url = new URL(`${this.baseURL}/${table}`);
             
             if (options.select) url.searchParams.append('select', options.select);
-            if (options.where) Object.entries(options.where).forEach(([key, value]) => {
-                url.searchParams.append(`${key}=eq.${value}`);
-            });
+            if (options.where) {
+                Object.entries(options.where).forEach(([key, value]) => {
+                    url.searchParams.append(key, `eq.${value}`);
+                });
+            }
+            if (options.limit) url.searchParams.append('limit', String(options.limit));
+            if (options.order) {
+                // options.order: { column: 'created_at', desc: true }
+                url.searchParams.append('order', options.order.column);
+                if (options.order.desc) url.searchParams.append('descending', 'true');
+            }
 
             try {
                 const response = await fetch(url.toString(), {
                     method: 'GET',
                     headers: {
                         'apikey': this.anonKey,
-                        'Authorization': token ? `Bearer ${token}` : '',
-                        'Content-Type': 'application/json'
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     }
                 });
 
                 if (response.ok) {
                     return { success: true, data: await response.json() };
                 } else {
-                    return { success: false, error: 'Error en GET' };
+                    let errMsg = 'Error en GET';
+                    try {
+                        const errJson = await response.json();
+                        errMsg = errJson.message || errJson.error || JSON.stringify(errJson);
+                    } catch (_) {
+                        errMsg = await response.text();
+                    }
+                    return { success: false, error: errMsg, status: response.status };
                 }
             } catch (error) {
                 console.error('Error en GET:', error);

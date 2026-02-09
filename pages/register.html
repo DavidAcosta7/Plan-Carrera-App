@@ -1,79 +1,89 @@
-<div class="register-page">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/register.css">
+<body class="register-page">
     <div class="register-container">
-        <div class="register-card">
-            <div class="register-header">
-                <h1>Crear Cuenta</h1>
-                <p>Únete a miles de profesionales aprendiendo con IA</p>
+        <div class="auth-card card animate-fade-in">
+            <div class="card-header text-center mb-6">
+                <h1 class="text-gradient text-3xl font-bold mb-2">Crear Cuenta</h1>
+                <p class="text-gray-600">Únete a miles de profesionales aprendiendo con IA</p>
             </div>
 
             <form class="register-form" id="registerForm">
                 <div class="form-group">
-                    <label for="name">Nombre Completo</label>
-                    <input type="text" id="name" name="name" required placeholder="Juan Pérez">
+                    <label for="name" class="form-label">Nombre Completo</label>
+                    <input type="text" id="name" name="name" required placeholder="Juan Pérez" class="input">
                 </div>
 
                 <div class="form-group">
-                    <label for="email">Correo Electrónico</label>
-                    <input type="email" id="email" name="email" required placeholder="juan@ejemplo.com">
+                    <label for="email" class="form-label">Correo Electrónico</label>
+                    <input type="email" id="email" name="email" required placeholder="juan@ejemplo.com" class="input">
                 </div>
 
                 <div class="form-group">
-                    <label for="password">Contraseña</label>
-                    <input type="password" id="password" name="password" required placeholder="Mínimo 6 caracteres">
-                    <div class="password-strength" id="passwordStrength"></div>
+                    <label for="password" class="form-label">Contraseña</label>
+                    <input type="password" id="password" name="password" required placeholder="Mínimo 6 caracteres" class="input">
+                    <div class="password-strength" id="passwordStrength" class="text-sm mt-2"></div>
                 </div>
 
                 <div class="form-group">
-                    <label for="confirmPassword">Confirmar Contraseña</label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Repite tu contraseña">
+                    <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Repite tu contraseña" class="input">
                 </div>
 
                 <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="terms" name="terms" required>
-                        <span>Acepto los <a href="#" class="link">términos y condiciones</a> y la <a href="#" class="link">política de privacidad</a></span>
+                    <label class="flex items-start gap-2 text-gray-600 text-sm">
+                        <input type="checkbox" id="terms" name="terms" required class="mt-1">
+                        <span>Acepto los <a href="#" class="text-primary">términos y condiciones</a> y la <a href="#" class="text-primary">política de privacidad</a></span>
                     </label>
                 </div>
 
-                <button type="submit" class="btn-primary btn-full" id="submitBtn">
+                <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
                     Crear Cuenta
                 </button>
 
-                <div class="form-footer">
-                    <p>¿Ya tienes cuenta? <a href="#" class="link" data-route="/login">Inicia sesión</a></p>
+                <div class="form-footer mt-6 text-center">
+                    <p class="text-gray-600">¿Ya tienes cuenta? <a href="#" class="text-primary" data-route="/login">Inicia sesión</a></p>
                 </div>
             </form>
         </div>
 
-        <div class="register-info">
-            <h2>¿Por qué registrarte?</h2>
-            <div class="benefits">
-                <div class="benefit">
-                    <div class="benefit-icon">🎯</div>
-                    <div>
-                        <h3>Plan Personalizado</h3>
-                        <p>IA crea un plan único basado en tus objetivos</p>
+        <div class="auth-card card animate-fade-in" style="animation-delay: 0.2s;">
+            <h2 class="text-white text-2xl font-semibold text-center mb-8">¿Por qué registrarte?</h2>
+            <div class="space-y-6">
+                <div class="card hover-lift">
+                    <div class="flex items-center gap-4">
+                        <div class="text-4xl w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center">🎯</div>
+                        <div>
+                            <h3 class="text-gray-800 text-lg font-semibold mb-1">Plan Personalizado</h3>
+                            <p class="text-gray-600 text-sm">IA crea un plan único basado en tus objetivos</p>
+                        </div>
                     </div>
                 </div>
-                <div class="benefit">
-                    <div class="benefit-icon">🤖</div>
-                    <div>
-                        <h3>Chat con Claude</h3>
-                        <p>Asistencia 24/7 para resolver dudas</p>
+                <div class="card hover-lift">
+                    <div class="flex items-center gap-4">
+                        <div class="text-4xl w-16 h-16 bg-secondary-100 rounded-2xl flex items-center justify-center">🤖</div>
+                        <div>
+                            <h3 class="text-gray-800 text-lg font-semibold mb-1">Chat con Claude</h3>
+                            <p class="text-gray-600 text-sm">Asistencia 24/7 para resolver dudas</p>
+                        </div>
                     </div>
                 </div>
-                <div class="benefit">
-                    <div class="benefit-icon">📊</div>
-                    <div>
-                        <h3>Seguimiento de Progreso</h3>
-                        <p>Visualiza tu avance y logros</p>
+                <div class="card hover-lift">
+                    <div class="flex items-center gap-4">
+                        <div class="text-4xl w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center">📊</div>
+                        <div>
+                            <h3 class="text-gray-800 text-lg font-semibold mb-1">Seguimiento de Progreso</h3>
+                            <p class="text-gray-600 text-sm">Visualiza tu avance y logros</p>
+                        </div>
                     </div>
                 </div>
-                <div class="benefit">
-                    <div class="benefit-icon">🚀</div>
-                    <div>
-                        <h3>Proyectos Reales</h3>
-                        <p>Construye tu portfolio profesional</p>
+                <div class="card hover-lift">
+                    <div class="flex items-center gap-4">
+                        <div class="text-4xl w-16 h-16 bg-secondary-100 rounded-2xl flex items-center justify-center">🚀</div>
+                        <div>
+                            <h3 class="text-gray-800 text-lg font-semibold mb-1">Proyectos Reales</h3>
+                            <p class="text-gray-600 text-sm">Construye tu portfolio profesional</p>
+                        </div>
                     </div>
                 </div>
             </div>

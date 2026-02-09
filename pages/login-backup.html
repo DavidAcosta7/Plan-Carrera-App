@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Plan Carrera Pro</title>
+    <link rel="stylesheet" href="../css/login.css">
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        @keyframes floatIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes floatUp {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+        
+        .login-page {
+            background: var(--bg-page-gradient);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            position: relative;
+        }
+        
+        .login-container {
+            flex: 1;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 32px 16px;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="login-page">
+    <!-- Banner con fondo azul claro -->
+    <div class="login-banner" style="background: linear-gradient(135deg, #87CEEB 0%, #6BB6D6 50%, #5AA3C0 100%) !important; width: 100% !important; padding: 32px 16px !important; text-align: center !important; box-shadow: 0 4px 20px rgba(135, 206, 235, 0.3) !important; position: relative !important; z-index: 1 !important; display: block !important; visibility: visible !important;">
+        <div class="banner-content" style="position: relative !important; z-index: 2 !important; max-width: 800px !important; margin: 0 auto !important;">
+            <h2 style="font-size: 30px !important; font-weight: 700 !important; color: white !important; margin-bottom: 12px !important; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;">Continúa tu viaje profesional</h2>
+            <p style="font-size: 16px !important; font-weight: 500 !important; color: rgba(255, 255, 255, 0.95) !important; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important; line-height: 1.75 !important;">Accede a tu plan personalizado y sigue aprendiendo con IA.</p>
+        </div>
+    </div>
+
+    <div class="login-container">
+        <!-- Card flotante principal -->
+        <div class="floating-card animate-fade-in" style="animation-delay: 0.2s; background: rgba(255, 255, 255, 0.95) !important; border: 1px solid rgba(139, 124, 232, 0.18) !important; border-radius: 12px !important; padding: 32px !important; box-shadow: 0 20px 44px rgba(113, 111, 233, 0.15), 0 2px 8px rgba(139, 124, 232, 0.08) !important; backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important; animation: floatIn 0.6s ease-out, floatUp 4s ease-in-out infinite !important;">
+            <h1 class="text-gradient text-3xl font-bold mb-2">Iniciar Sesión</h1>
+            <p class="text-gray-600 mb-6">Bienvenido de vuelta a Plan Carrera Pro</p>
+
+            <form id="loginForm" class="mb-6">
+                <div class="form-group">
+                    <label for="email" class="form-label">Email</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="tu@email.com"
+                        class="input"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Contraseña</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="•••••••"
+                        class="input"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    Iniciar Sesión
+                </button>
+            </form>
+
+            <div class="mb-6 text-center">
+                <span class="text-gray-500">¿No tienes cuenta?</span>
+            </div>
+
+            <button class="btn btn-secondary btn-block" data-route="/register">
+                Crear cuenta nueva
+            </button>
+        </div>
+    </div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    
+    // Validación básica
+    if (!email || !password) {
+        alert('Por favor completa todos los campos');
+        return;
+    }
+    
+    // Verificar credenciales en localStorage
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const user = users.find(u => u.email === email && u.password === password);
+    
+    if (user) {
+        // Login exitoso
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        showNotification('¡Bienvenido!', 'success');
+        setTimeout(() => {
+            router.navigate('/dashboard');
+        }, 500);
+    } else {
+        showNotification('Email o contraseña incorrectos', 'error');
+    }
+});
+</script>
+</body>
+</html>

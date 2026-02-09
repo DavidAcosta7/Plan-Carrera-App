@@ -3,7 +3,9 @@
   Ruta: /dashboard/plans/[planId]
   Muestra título, objetivo, plazo, fases y proyectos del plan.
 -->
-<div class="plan-detail-page">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/plan-detail.css">
+<body class="plan-detail-page">
     <header class="plan-detail-header">
         <div class="header-content">
             <a href="#/dashboard" class="back-link" data-route="/dashboard">← Volver al Dashboard</a>
@@ -113,38 +115,92 @@
             }
 
             const content = plan.plan_content || plan;
-            const title = plan.title || content.title || 'Plan sin título';
+            const title = plan.title || content.plan_title || content.title || 'Plan sin título';
             const objective = plan.objective || content.objective || content.description || 'Objetivo no especificado';
-            const deadline = plan.estimated_duration || content.estimatedDuration || content.deadline || 'Plazo no especificado';
+            const totalWeeks = content.total_weeks || plan.timeline_weeks;
+            const deadline = plan.estimated_duration || content.estimatedDuration || content.deadline ||
+                (totalWeeks ? totalWeeks + ' semanas' : 'Plazo no especificado');
             const createdAt = plan.created_at
                 ? new Date(plan.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
                 : 'Fecha no disponible';
 
             document.getElementById('planDetailTitle').textContent = title;
-            document.getElementById('planDetailMeta').textContent = `Plazo: ${deadline}`;
+            document.getElementById('planDetailMeta').textContent = totalWeeks ? totalWeeks + ' semanas • Plan de carrera' : 'Plan de carrera';
             document.getElementById('planObjective').textContent = objective;
             document.getElementById('planDeadline').textContent = deadline;
             document.getElementById('planCreatedAt').textContent = createdAt;
 
             const phases = content.phases || [];
             const container = document.getElementById('phasesContainer');
+            function esc(s) { if (s == null) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
             if (phases.length === 0) {
                 container.innerHTML = '<p class="empty-phases">No hay fases definidas en este plan.</p>';
             } else {
-                container.innerHTML = phases.map(function(phase) {
-                    const items = (phase.items || []).map(function(item) { return '<li>' + item + '</li>'; }).join('');
-                    const projects = (phase.projects || []).map(function(p) {
-                        return '<div class="project-item"><strong>' + (p.title || p.name) + '</strong>' +
-                            (p.description ? '<p>' + p.description + '</p>' : '') + '</div>';
+                container.innerHTML = phases.map(function(phase, idx) {
+                    const phaseId = 'phase-' + (phase.id != null ? phase.id : idx);
+                    const durationWeeks = phase.duration_weeks || phase.duration;
+                    const durationStr = durationWeeks ? durationWeeks + (durationWeeks === 1 ? ' semana' : ' semanas') : '';
+                    const projects = phase.projects || [];
+                    const projectCount = projects.length;
+                    const learningItems = phase.learning_items || phase.items || [];
+                    const resources = phase.resources || [];
+
+                    const learningHtml = learningItems.length
+                        ? '<div class="plan-detail-block"><h4 class="plan-detail-block-title">Qué aprenderás</h4><ul class="plan-detail-learning-list">' +
+                          learningItems.map(function(item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul></div>'
+                        : '';
+
+                    const resourcesHtml = resources.length
+                        ? '<div class="plan-detail-block"><h4 class="plan-detail-block-title">Cursos</h4><div class="plan-detail-courses">' +
+                          resources.map(function(r) {
+                              const url = r.url || '#';
+                              return '<a class="plan-detail-course-link" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(r.title || 'Recurso') + '</a>';
+                          }).join('') + '</div></div>'
+                        : '';
+
+                    const projectCards = projects.map(function(p) {
+                        const diff = (p.difficulty || 'medium').toLowerCase();
+                        const diffLabel = diff === 'easy' ? 'Fácil' : diff === 'hard' ? 'Difícil' : 'Medio';
+                        const reqs = p.requirements || [];
+                        const reqList = reqs.length ? '<ul class="plan-detail-reqs">' + reqs.map(function(r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul>' : '';
+                        const githubTips = p.github_tips ? '<div class="plan-detail-github-tips"><strong>GitHub:</strong> ' + esc(p.github_tips) + '</div>' : '';
+                        return '<div class="plan-detail-project-card" data-difficulty="' + diff + '">' +
+                            '<span class="plan-detail-difficulty plan-detail-difficulty-' + diff + '">' + esc(diffLabel) + '</span>' +
+                            '<h5 class="plan-detail-project-title">' + esc(p.title || p.name || 'Proyecto') + '</h5>' +
+                            (p.description ? '<p class="plan-detail-project-desc">' + esc(p.description) + '</p>' : '') +
+                            (reqList ? '<div class="plan-detail-reqs-wrap">Requisitos:' + reqList + '</div>' : '') +
+                            githubTips +
+                            '<button type="button" class="btn-secondary plan-detail-mark-done">Marcar como hecho</button>' +
+                            '</div>';
                     }).join('');
-                    return '<div class="phase-detail-card">' +
-                        '<h3>' + (phase.title || 'Fase') + '</h3>' +
-                        (phase.duration ? '<p class="phase-duration">' + phase.duration + '</p>' : '') +
-                        (items ? '<ul class="phase-items">' + items + '</ul>' : '') +
-                        (projects ? '<div class="phase-projects"><h4>Proyectos</h4>' + projects + '</div>' : '') +
+
+                    const bodyHtml = '<div class="plan-detail-phase-body">' +
+                        learningHtml + resourcesHtml +
+                        '<div class="plan-detail-block"><h4 class="plan-detail-block-title">Proyectos para GitHub</h4><div class="plan-detail-projects-grid">' + projectCards + '</div></div>' +
                         '</div>';
+
+                    return '<div class="plan-detail-phase-card" data-phase-id="' + phaseId + '">' +
+                        '<div class="plan-detail-phase-header" role="button" tabindex="0" aria-expanded="true" data-toggle="phase">' +
+                        '<span class="plan-detail-phase-title">' + esc(phase.title || 'Fase ' + (idx + 1)) + '</span>' +
+                        '<span class="plan-detail-phase-meta">' + esc(durationStr) + (projectCount ? ' • 0/' + projectCount + ' proyectos' : '') + '</span>' +
+                        '<span class="plan-detail-phase-chevron" aria-hidden="true">▼</span>' +
+                        '</div>' + bodyHtml + '</div>';
                 }).join('');
             }
+
+            // Toggle expand/collapse
+            container.querySelectorAll('.plan-detail-phase-header').forEach(function(header) {
+                header.addEventListener('click', function() {
+                    var card = header.closest('.plan-detail-phase-card');
+                    var body = card && card.querySelector('.plan-detail-phase-body');
+                    var open = body && body.style.display !== 'none';
+                    if (body) body.style.display = open ? 'none' : 'block';
+                    header.setAttribute('aria-expanded', open ? 'false' : 'true');
+                    var chevron = header.querySelector('.plan-detail-phase-chevron');
+                    if (chevron) chevron.textContent = open ? '▶' : '▼';
+                });
+            });
 
             if (summaryEl) summaryEl.style.display = 'grid';
             if (phasesSection) phasesSection.style.display = 'block';

@@ -1,0 +1,91 @@
+<!-- Chatbot Sidebar: overlay + panel + botón flotante -->
+<div id="chatbotSidebarRoot">
+  <!-- Overlay -->
+  <div class="chatbot-sidebar-overlay" id="chatbotOverlay" aria-hidden="true"></div>
+
+  <!-- Sidebar panel -->
+  <aside class="chatbot-sidebar-panel" id="chatbotSidebar" aria-hidden="true">
+    <!-- Header -->
+    <header class="chatbot-sidebar-header">
+      <div class="chatbot-sidebar-header-left">
+        <div class="chatbot-avatar-wrap">
+          <div class="chatbot-avatar">
+            <svg class="chatbot-avatar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          </div>
+          <span class="chatbot-avatar-online"></span>
+        </div>
+        <div>
+          <h2 class="chatbot-sidebar-title">Groq AI</h2>
+          <span class="chatbot-sidebar-status">En línea</span>
+        </div>
+      </div>
+      <div class="chatbot-sidebar-header-actions">
+        <button type="button" class="chatbot-sidebar-btn-icon" id="chatbotBtnMinimize" title="Minimizar" aria-label="Minimizar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4v16M16 4v16"/><line x1="4" y1="8" x2="4" y2="16"/><line x1="20" y1="8" x2="20" y2="16"/></svg>
+        </button>
+        <button type="button" class="chatbot-sidebar-btn-icon" id="chatbotBtnClose" title="Cerrar" aria-label="Cerrar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Vista minimizada: solo botón maximizar -->
+    <div class="chatbot-sidebar-minimized" id="chatbotMinimizedView" style="display: none;">
+      <button type="button" class="chatbot-sidebar-btn-maximize" id="chatbotBtnMaximize" title="Expandir">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        Abrir chat
+      </button>
+    </div>
+
+    <!-- Contenido normal: mensajes + input -->
+    <div class="chatbot-sidebar-body" id="chatbotSidebarBody">
+      <div class="chatbot-sidebar-messages" id="chatbotMessages">
+        <!-- Mensaje inicial de bienvenida -->
+        <div class="chatbot-msg chatbot-msg-assistant" data-role="assistant">
+          <div class="chatbot-msg-content">
+            <p>¡Hola! 👋 Soy tu mentor de programación (Groq AI).</p>
+            <p>¿En qué puedo ayudarte hoy? Puedo:</p>
+            <ul>
+              <li>Resolver dudas sobre tu plan de carrera</li>
+              <li>Explicar conceptos técnicos</li>
+              <li>Revisar tu código</li>
+              <li>Sugerir recursos de aprendizaje</li>
+              <li>Motivarte en tu proceso 💪</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preguntas rápidas (solo cuando hay 1 mensaje = solo el de bienvenida) -->
+      <div class="chatbot-quick-questions" id="chatbotQuickQuestions">
+        <button type="button" class="chatbot-quick-btn" data-question="¿Cómo va mi progreso?">¿Cómo va mi progreso?</button>
+        <button type="button" class="chatbot-quick-btn" data-question="Dame un consejo para hoy">Dame un consejo para hoy</button>
+        <button type="button" class="chatbot-quick-btn" data-question="Explícame un concepto de mi fase actual">Explícame un concepto de mi fase actual</button>
+        <button type="button" class="chatbot-quick-btn" data-question="¿Qué proyecto debo hacer ahora?">¿Qué proyecto debo hacer ahora?</button>
+      </div>
+
+      <!-- Indicador "escribiendo..." -->
+      <div class="chatbot-typing" id="chatbotTyping" style="display: none;">
+        <div class="chatbot-typing-spinner"></div>
+        <span>Estoy escribiendo...</span>
+      </div>
+
+      <div class="chatbot-input-wrap">
+        <input type="text" class="chatbot-input" id="chatbotInput" placeholder="Escribe tu mensaje..." autocomplete="off" />
+        <button type="button" class="chatbot-send-btn" id="chatbotSendBtn" title="Enviar" aria-label="Enviar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Botón flotante -->
+  <button type="button" class="chatbot-float-btn" id="chatbotFloatBtn" aria-label="Abrir chat con Groq AI">
+    <span class="chatbot-float-btn-pulse"></span>
+    <span class="chatbot-float-btn-inner">
+      <svg class="chatbot-float-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      <span class="chatbot-float-badge">!</span>
+    </span>
+    <span class="chatbot-float-tooltip">Hablar con Groq AI 💬</span>
+  </button>
+</div>

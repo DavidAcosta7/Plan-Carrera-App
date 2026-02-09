@@ -1,0 +1,75 @@
+/* CarrerBot componente reutilizable */
+.carrerbot-container {
+  position: relative;
+  display: inline-block;
+  z-index: 10;
+}
+
+.carrerbot {
+  width: 260px;
+  height: auto;
+  filter: drop-shadow(0 6px 16px rgba(0,0,0,0.2));
+}
+
+/* Variantes de tamaño/posicion */
+.carrerbot--hero .carrerbot {
+  width: 360px;
+}
+
+.carrerbot--corner {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+}
+.carrerbot--corner .carrerbot {
+  width: 180px;
+}
+
+/* Animaciones */
+.carrerbot--greet #arm-left {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  animation: wave-hand 2.6s ease-in-out infinite;
+}
+
+.carrerbot--greet #head {
+  transform-box: fill-box;
+  transform-origin: 50% 10%;
+  animation: nod-head 3.2s ease-in-out infinite;
+}
+
+@keyframes wave-hand {
+  0%   { transform: rotate(0deg); }
+  20%  { transform: rotate(-18deg); }
+  40%  { transform: rotate(0deg); }
+  60%  { transform: rotate(-12deg); }
+  80%  { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes nod-head {
+  0%   { transform: translateY(0px) rotate(0deg); }
+  30%  { transform: translateY(1.5px) rotate(-2deg); }
+  60%  { transform: translateY(0px) rotate(0deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+/* Contenedor de layout para landing */
+.landing-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .landing-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .carrerbot--hero {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+}

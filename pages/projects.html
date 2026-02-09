@@ -1,4 +1,6 @@
-<div class="projects-page">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/projects.css">
+<body class="projects-page">
     <header class="projects-header">
         <div class="header-content">
             <h1>Mis Proyectos</h1>
@@ -117,36 +119,55 @@
 <script>
 let currentFilter = 'all';
 let userProjects = [];
+let currentPlanId = null;
+let currentPlanContent = null;
+let currentProgress = { completedProjects: [], completedPhases: [], expandedPhases: [1] };
 
-function initProjectsPage() {
+async function initProjectsPage() {
     if (!router.requireAuth()) return;
-    if (!router.requirePlan()) return;
-    
-    loadUserProjects();
+    await loadUserProjects();
     renderProjects();
     updateStatistics();
     setupEventListeners();
 }
 
-function loadUserProjects() {
-    const user = auth.getUser();
-    if (!user || !user.plan) return;
-    
-    userProjects = [];
-    
-    // Cargar proyectos del plan del usuario
-    user.plan.phases.forEach(phase => {
-        phase.projects.forEach(project => {
-            userProjects.push({
-                ...project,
-                phaseId: phase.id,
-                phaseTitle: phase.title,
-                phaseColor: phase.color,
-                isCompleted: user.progress.completedProjects.includes(project.id),
-                isLocked: !isProjectUnlocked(phase.id, project)
+async function loadUserProjects() {
+    try {
+        const supaUser = window.supabase && window.supabase.getCurrentUser ? window.supabase.getCurrentUser() : null;
+        if (!supaUser) return;
+        const plans = await planService.getUserPlans(supaUser.id);
+        const plan = plans && plans[0];
+        if (!plan) return;
+        const content = plan.plan_content || {};
+        currentPlanId = plan.id;
+        currentPlanContent = content;
+        try {
+            currentProgress = await planService.getProgress(supaUser.id, currentPlanId);
+        } catch (_) {
+            currentProgress = { completedProjects: [], completedPhases: [], expandedPhases: [1] };
+        }
+        userProjects = [];
+        (content.phases || []).forEach(function(phase, pIdx) {
+            (phase.projects || []).forEach(function(project, idx) {
+                const projId = project.id || [plan.id, pIdx, idx].join('-');
+                userProjects.push({
+                    id: projId,
+                    title: project.title || project.name || 'Proyecto',
+                    description: project.description || '',
+                    difficulty: (project.difficulty || 'medium').toLowerCase(),
+                    requirements: project.requirements || [],
+                    githubTips: project.github_tips || '',
+                    phaseId: phase.id != null ? phase.id : pIdx,
+                    phaseTitle: phase.title || 'Fase ' + (pIdx + 1),
+                    phaseColor: phase.color || '#716FE9',
+                    isCompleted: Array.isArray(currentProgress.completedProjects) ? currentProgress.completedProjects.includes(projId) : false,
+                    isLocked: false
+                });
             });
         });
-    });
+    } catch (e) {
+        console.error('Error cargando proyectos:', e);
+    }
 }
 
 function renderProjects() {
@@ -256,11 +277,12 @@ function showAddProjectModal() {
     const modal = document.getElementById('addProjectModal');
     const phaseSelect = document.getElementById('projectPhase');
     
-    // Cargar fases disponibles
-    const user = auth.getUser();
-    phaseSelect.innerHTML = user.plan.phases.map(phase => 
-        `<option value="${phase.id}">${phase.title}</option>`
-    ).join('');
+    const phases = (currentPlanContent && currentPlanContent.phases) || [];
+    phaseSelect.innerHTML = phases.map(function(phase, idx) {
+        var id = phase.id != null ? phase.id : idx;
+        var title = phase.title || ('Fase ' + (idx + 1));
+        return '<option value="' + id + '">' + title + '</option>';
+    }).join('');
     
     modal.style.display = 'flex';
 }
@@ -336,25 +358,28 @@ function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
 
-function toggleProjectStatus(projectId) {
-    const user = auth.getUser();
-    const index = user.progress.completedProjects.indexOf(projectId);
-    
-    if (index > -1) {
-        user.progress.completedProjects.splice(index, 1);
-    } else {
-        user.progress.completedProjects.push(projectId);
+async function toggleProjectStatus(projectId) {
+    try {
+        const supaUser = window.supabase && window.supabase.getCurrentUser ? window.supabase.getCurrentUser() : null;
+        if (!supaUser || !currentPlanId) return;
+        const idx = (currentProgress.completedProjects || []).indexOf(projectId);
+        if (idx > -1) {
+            currentProgress.completedProjects.splice(idx, 1);
+        } else {
+            currentProgress.completedProjects.push(projectId);
+        }
+        await planService.saveProgress(supaUser.id, currentPlanId, currentProgress);
+        userProjects = userProjects.map(function(p) {
+            if (p.id === projectId) return { ...p, isCompleted: idx === -1 };
+            return p;
+        });
+        renderProjects();
+        updateStatistics();
+        showNotification(idx > -1 ? 'Proyecto marcado como incompleto' : '¡Proyecto completado!', 'success');
+    } catch (e) {
+        console.error('Error al actualizar progreso:', e);
+        showNotification('No se pudo actualizar el estado del proyecto', 'error');
     }
-    
-    auth.updateProgress(user.progress);
-    loadUserProjects();
-    renderProjects();
-    updateStatistics();
-    
-    showNotification(
-        index > -1 ? 'Proyecto marcado como incompleto' : '¡Proyecto completado!',
-        'success'
-    );
 }
 
 function isProjectUnlocked(phaseId, project) {
