@@ -295,11 +295,17 @@
 
             executeScripts() {
                 const scripts = this.container.querySelectorAll('script');
-                scripts.forEach(script => {
-                    const newScript = document.createElement('script');
-                    newScript.textContent = script.textContent;
-                    document.head.appendChild(newScript);
-                    document.head.removeChild(newScript);
+                scripts.forEach((script, index) => {
+                    try {
+                        // Usar eval en lugar de appendChild para evitar problemas con expresiones regulares
+                        if (script.textContent) {
+                            eval(script.textContent);
+                        }
+                    } catch (error) {
+                        console.error('Error executing script', index, ':', error);
+                        console.error('Script content:', script.textContent);
+                        // Continuar con los demás scripts
+                    }
                 });
             }
 

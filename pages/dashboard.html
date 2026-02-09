@@ -9,8 +9,8 @@
   - NO botón "Nuevo Plan Carrera"
 -->
 
-<link rel="stylesheet" href="../css/styles.css">
-<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/dashboard.css">
 <body class="dashboard-page">
     <header class="dashboard-header">
       <div class="flex justify-between items-center">
@@ -44,7 +44,7 @@
           <div class="text-6xl mb-4">📋</div>
           <h2 class="text-gray-800 text-2xl mb-2 font-semibold">Aún no tienes un Plan de Carrera creado.</h2>
           <p class="text-gray-600 text-base mb-6">Completa el onboarding para que la IA genere tu plan según tus opciones.</p>
-          <a href="#/onboarding" class="btn btn-primary" data-route="/onboarding">Nuevo Plan Carrera</a>
+          <button type="button" class="btn btn-primary" onclick="startNewPlanOnboarding()">Nuevo Plan Carrera</button>
         </div>
       </section>
 
@@ -226,7 +226,7 @@ function renderPlanCard(plan) {
         <div class="dashboard-metric-value">Proyectos</div>
         <div class="dashboard-metric-label">Ver y gestionar tus proyectos</div>
       </article>
-      <article class="dashboard-metric" onclick="window.router.navigate('/onboarding')" role="button" tabindex="0">
+      <article class="dashboard-metric" onclick="startNewPlanOnboarding()" role="button" tabindex="0">
         <div class="dashboard-metric-icon">🤖</div>
         <div class="dashboard-metric-value">Crear Plan</div>
         <div class="dashboard-metric-label">Generar nuevo plan con IA</div>
@@ -269,6 +269,17 @@ function showError(message) {
     const messageEl = document.getElementById('errorMessage');
     if (messageEl) messageEl.textContent = message;
     showState('error');
+}
+
+function startNewPlanOnboarding() {
+    sessionStorage.setItem('creatingNewPlan', 'true');
+    if (window.router && window.router.navigate) {
+        window.router.navigate('/onboarding');
+    } else if (window.location.hash) {
+        window.location.hash = '#/onboarding';
+    } else {
+        window.location.href = window.location.pathname + '#/onboarding';
+    }
 }
 
 function openPlan(planId) {

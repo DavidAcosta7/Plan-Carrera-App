@@ -9,8 +9,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Onboarding - Plan Carrera Pro</title>
-    <link rel="stylesheet" href="../css/styles.css">
-    <link rel="stylesheet" href="../css/onboarding.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/onboarding.css">
 </head>
 <body class="onboarding-page">
     <div class="onboarding-chat-wrapper">
@@ -240,11 +240,41 @@
     }
 
     function goToDashboard() {
+        console.log('goToDashboard() ejecutándose');
+        console.log('window.router disponible:', !!window.router);
+        console.log('window.router.navigate disponible:', !!(window.router && window.router.navigate));
+        console.log('window.router.handleRoute disponible:', !!(window.router && window.router.handleRoute));
+        
         sessionStorage.removeItem('fromRegister');
         sessionStorage.removeItem('creatingNewPlan');
-        if (window.router) window.router.navigate('/dashboard');
-        else if (window.location.hash) window.location.hash = '#/dashboard';
-        else window.location.href = '../index.html#/dashboard';
+        
+        // Usar el router del sistema de routing
+        if (window.router && window.router.navigate) {
+            console.log('Usando window.router.navigate("/dashboard")');
+            window.router.navigate('/dashboard');
+            
+            // Forzar el manejo de la ruta
+            setTimeout(() => {
+                console.log('Forzando handleRoute()');
+                if (window.router.handleRoute) {
+                    window.router.handleRoute();
+                }
+            }, 50);
+        } else if (window.location.hash !== undefined) {
+            console.log('Usando window.location.hash = "#/dashboard"');
+            window.location.hash = '#/dashboard';
+            
+            // Forzar el manejo de la ruta
+            setTimeout(() => {
+                if (window.router && window.router.handleRoute) {
+                    window.router.handleRoute();
+                }
+            }, 50);
+        } else {
+            console.log('Usando window.location.href con hash');
+            // Último recurso: recargar la página con el hash
+            window.location.href = window.location.pathname + '#/dashboard';
+        }
     }
 
     /** Genera el plan con Groq (POST /ai/generate-plan-from-chat) usando el último mensaje del usuario o todos */
@@ -293,9 +323,40 @@
             .catch(onError);
     }
 
-    function initOnboarding() {
+    function navigateTo(path) {
+        if (window.router && window.router.navigate) {
+            window.router.navigate(path);
+        } else if (window.location.hash !== undefined) {
+            window.location.hash = '#' + path;
+        } else {
+            window.location.href = window.location.pathname + '#' + path;
+        }
+    }
+
+    async function initOnboarding() {
         var auth = window.auth;
-        // Sin autenticación de rutas: permitir acceso directo a onboarding.
+        var supaUser = window.supabase && window.supabase.getCurrentUser ? window.supabase.getCurrentUser() : null;
+        if (auth && auth.loadCurrentUser && auth.isAuthenticated && !auth.isAuthenticated() && supaUser && supaUser.id) {
+            try {
+                await auth.loadCurrentUser();
+            } catch (e) {}
+        }
+        var isAuthed = (auth && auth.isAuthenticated && auth.isAuthenticated()) || (supaUser && supaUser.id);
+        if (!isAuthed) {
+            navigateTo('/register');
+            return;
+        }
+
+        var fromRegister = sessionStorage.getItem('fromRegister');
+        var creatingNewPlan = sessionStorage.getItem('creatingNewPlan');
+        if (!fromRegister && !creatingNewPlan) {
+            navigateTo('/dashboard');
+            return;
+        }
+
+        var chatCard = document.getElementById('onboardingChatCard');
+        if (chatCard && chatCard.getAttribute('data-init') === 'true') return;
+        if (chatCard) chatCard.setAttribute('data-init', 'true');
 
         chatState.messages = [{ role: 'assistant', content: WELCOME_GROQ }];
         chatState.loading = false;
@@ -349,7 +410,14 @@
             });
         }
         if (generatePlanBtn) generatePlanBtn.addEventListener('click', generatePlanFromConversation);
-        if (goBtn) goBtn.addEventListener('click', goToDashboard);
+        if (goBtn) {
+            console.log('Asignando evento click al botón "Ver mi Dashboard"');
+            goBtn.addEventListener('click', function(e) {
+                console.log('Botón "Ver mi Dashboard" clickeado');
+                e.preventDefault();
+                goToDashboard();
+            });
+        }
         if (retryBtn) retryBtn.addEventListener('click', function() { showState('chat'); });
 
         var quickQuestions = document.getElementById('onboardingQuickQuestions');
