@@ -10,41 +10,16 @@
    Soft UI / Glassmorphism
    ======================================== */
 :root {
-  /* Paleta Soft Pastel - botones, cards, micro-interacciones */
-  --color-primary: #8B7CE8;
-  --color-primary-soft: #C5D3F0;
-  --color-primary-hover: #7B6AD8;
-  --color-secondary: #9B88E8;
-  --color-secondary-soft: #D4C5F9;
-  --color-secondary-hover: #8A77D7;
-  --color-tertiary: #87CEEB;
-  --color-tertiary-soft: #B8E0F5;
-  --color-tertiary-hover: #6BB6D6;
-  --color-success: #6BCF7F;
-  --color-success-soft: #A8E6CF;
-  --color-warning: #F4D160;
-  --color-warning-soft: #F8E7A0;
-  --color-error: #FF6B9D;
-  --color-error-soft: #FFB3C1;
-  --color-neutral: #9CA3AF;
-  --color-neutral-soft: #D1D5DB;
-  --color-white: #F7F8FB;
-  --color-black: #000000;
-
-  /* Fondos - Soft Pastel con gradientes sutiles */
-  --bg-page: #f3f4f8;
-  --bg-page-gradient: linear-gradient(180deg,
-    rgba(243, 244, 248, 1) 0%,
-    rgba(230, 228, 255, 0.22) 35%,
-    rgba(215, 230, 250, 0.18) 65%,
-    rgba(240, 242, 248, 1) 100%);
-  --bg-card: rgba(242, 244, 248, 0.94);
-  --bg-card-light: rgba(242, 244, 248, 0.98);
-  --bg-card-soft: #f8f6ff;
-  --border-soft: rgba(205, 208, 220, 0.85);
-  --border-soft-focus: rgba(139, 124, 232, 0.4);
-  --text-soft: #374151;
-  --text-soft-muted: #6b7280;
+  --color-primary: rgba(196, 181, 253, 0.9);
+  --color-secondary: rgba(233, 213, 255, 0.9);
+  --color-success: rgba(167, 243, 208, 0.9);
+  --color-warning: rgba(253, 230, 138, 0.9);
+  --color-error: rgba(252, 165, 165, 0.9);
+  --color-text: rgba(75, 85, 99, 0.9);
+  --shadow-md: 0 4px 12px rgba(139, 92, 246, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --backdrop-blur: blur(20px);
+  --radius-lg: 16px;
 
   --color-gray-50: #fafafa;
   --color-gray-100: #f3f4f6;
@@ -141,6 +116,7 @@ html {
 }
 
 body {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #e9d5ff 100%);
   font-family: var(--font-family-sans);
   font-size: var(--font-body);
   font-weight: var(--font-weight-regular);
