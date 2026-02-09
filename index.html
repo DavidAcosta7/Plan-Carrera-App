@@ -117,8 +117,8 @@
                         return;
                     }
                     // Compatibilidad: /dashboard/plans/[planId]
-                    if (hash.startsWith('/dashboard/plans/')) {
-                        const planId = hash.replace(/^\/dashboard\/plans\//, '').split('/')[0];
+                    if (hash.startsWith('/dashboard/plan/')) {
+                        const planId = hash.replace(/^\/dashboard\/plan\//, '').split('/')[0];
                         if (planId) {
                             try {
                                 const res = await fetch('./pages/plan-detail.html');
@@ -139,23 +139,19 @@
                     // Dashboard: cargar desde archivo dedicado
                     if (hash === '/dashboard') {
                         try {
-                            if (!isFileProtocol) {
-                                const res = await fetch('./pages/dashboard.html');
-                                const content = await res.text();
-                                this.currentRoute = content;
-                                this.render(content);
-                            } else {
-                                const content = this.routes['/dashboard'] || this.routes['/'];
-                                this.currentRoute = content;
-                                this.render(content);
-                            }
+                            const res = await fetch('./pages/dashboard.html');
+                            const content = await res.text();
+                            this.currentRoute = content;
+                            this.render(content);
                             setTimeout(() => {
                                 if (window.loadDashboard) window.loadDashboard();
                                 if (window.initChatbotSidebar) window.initChatbotSidebar();
                             }, 100);
                         } catch (e) {
                             console.error('Error cargando dashboard:', e);
-                            this.container.innerHTML = '<div class="error">Error cargando dashboard. <a href="#/" data-route="/">Volver</a></div>';
+                            this.container.innerHTML = isFileProtocol
+                                ? '<div class="error">Esta app no funciona con file://. Inicia un servidor local.</div>'
+                                : '<div class="error">Error cargando dashboard. <a href="#/" data-route="/">Volver</a></div>';
                         }
                         return;
                     }
@@ -163,32 +159,18 @@
                     // Onboarding: cargar desde archivo dedicado como las otras páginas
                     if (hash === '/onboarding') {
                         try {
-                            if (!isFileProtocol) {
-                                const res = await fetch('./pages/onboarding.html');
-                                const content = await res.text();
-                                this.currentRoute = content;
-                                this.render(content);
-                                setTimeout(() => {
-                                    if (window.initOnboarding) window.initOnboarding();
-                                }, 100);
-                            } else {
-                                // Para file://, usar contenido inline como fallback
-                                const content = this.routes['/onboarding'] || onboardingContent || '';
-                                this.currentRoute = content;
-                                this.render(content);
-                                setTimeout(() => {
-                                    if (window.initOnboarding) window.initOnboarding();
-                                }, 100);
-                            }
-                        } catch (e) {
-                            console.error('Error cargando onboarding:', e);
-                            // Fallback a contenido inline
-                            const content = this.routes['/onboarding'] || onboardingContent || '';
+                            const res = await fetch('./pages/onboarding.html');
+                            const content = await res.text();
                             this.currentRoute = content;
                             this.render(content);
                             setTimeout(() => {
                                 if (window.initOnboarding) window.initOnboarding();
                             }, 100);
+                        } catch (e) {
+                            console.error('Error cargando onboarding:', e);
+                            this.container.innerHTML = isFileProtocol
+                                ? '<div class="error">Esta app no funciona con file://. Inicia un servidor local.</div>'
+                                : '<div class="error">Error cargando onboarding. <a href="#/" data-route="/">Volver</a></div>';
                         }
                         return;
                     }
@@ -210,61 +192,49 @@
                         return;
                     }
 
-                    // Rutas estáticas: landing, login, register (cargar desde pages/ o inline según protocolo)
+                    // Rutas estáticas: landing, login, register
                     if (hash === '/' || hash === '') {
                         try {
-                            if (!isFileProtocol) {
-                                const res = await fetch('./pages/landing.html');
-                                const content = await res.text();
-                                this.currentRoute = content;
-                                this.render(content);
-                            } else {
-                                const content = this.routes['/'] || (typeof landingContent !== 'undefined' ? landingContent : '');
-                                this.currentRoute = content;
-                                this.render(content);
-                            }
+                            const res = await fetch('./pages/landing.html');
+                            const content = await res.text();
+                            this.currentRoute = content;
+                            this.render(content);
                             setTimeout(() => { if (window.loadCarrerBot) window.loadCarrerBot(); }, 50);
                         } catch (e) {
                             console.error('Error cargando landing:', e);
-                            this.container.innerHTML = '<p>Error cargando landing. <a href="#/">Recargar</a></p>';
+                            this.container.innerHTML = isFileProtocol
+                                ? '<div class="error">Esta app no funciona con file://. Inicia un servidor local.</div>'
+                                : '<p>Error cargando landing. <a href="#/">Recargar</a></p>';
                         }
                         return;
                     }
                     if (hash === '/login') {
                         try {
-                            if (!isFileProtocol) {
-                                const res = await fetch('./pages/login.html');
-                                const content = await res.text();
-                                this.currentRoute = content;
-                                this.render(content);
-                            } else {
-                                const content = this.routes['/login'] || '';
-                                this.currentRoute = content;
-                                this.render(content);
-                            }
+                            const res = await fetch('./pages/login.html');
+                            const content = await res.text();
+                            this.currentRoute = content;
+                            this.render(content);
                             setTimeout(() => { if (window.initLoginForm) window.initLoginForm(); }, 100);
                         } catch (e) {
                             console.error('Error cargando login:', e);
-                            this.container.innerHTML = '<p>Error cargando login. <a href="#/">Volver</a></p>';
+                            this.container.innerHTML = isFileProtocol
+                                ? '<div class="error">Esta app no funciona con file://. Inicia un servidor local.</div>'
+                                : '<p>Error cargando login. <a href="#/">Volver</a></p>';
                         }
                         return;
                     }
                     if (hash === '/register') {
                         try {
-                            if (!isFileProtocol) {
-                                const res = await fetch('./pages/register.html');
-                                const content = await res.text();
-                                this.currentRoute = content;
-                                this.render(content);
-                            } else {
-                                const content = this.routes['/register'] || '';
-                                this.currentRoute = content;
-                                this.render(content);
-                            }
+                            const res = await fetch('./pages/register.html');
+                            const content = await res.text();
+                            this.currentRoute = content;
+                            this.render(content);
                             setTimeout(() => { if (window.initRegisterForm) window.initRegisterForm(); }, 100);
                         } catch (e) {
                             console.error('Error cargando register:', e);
-                            this.container.innerHTML = '<p>Error cargando registro. <a href="#/">Volver</a></p>';
+                            this.container.innerHTML = isFileProtocol
+                                ? '<div class="error">Esta app no funciona con file://. Inicia un servidor local.</div>'
+                                : '<p>Error cargando registro. <a href="#/">Volver</a></p>';
                         }
                         return;
                     }
@@ -283,7 +253,7 @@
                 try {
                     if (!content) {
                         console.warn('No hay contenido para la ruta actual');
-                        content = (typeof landingContent !== 'undefined') ? landingContent : '<div class="error">Contenido no disponible</div>';
+                        content = '<div class="error">Contenido no disponible</div>';
                     }
                     this.container.innerHTML = content;
                     this.executeScripts();
@@ -679,239 +649,13 @@
         };
 
         // Contenido de las páginas (inline para evitar CORS)
-        const landingContent = `
-<div class="landing-page">
-    <div class="landing-header-bubble">
-        <nav class="navbar">
-            <div class="navbar-container">
-                <div class="navbar-logo">
-                    <h3>Plan Carrera Pro</h3>
-                </div>
-                <div class="navbar-buttons">
-                    <button class="btn-outline" data-route="/login">
-                        Iniciar Sesión
-                    </button>
-                    <button class="btn-primary" data-route="/register">
-                        Registrarse
-                    </button>
-                </div>
-            </div>
-        </nav>
-        <section class="hero">
-            <div class="landing-hero-grid">
-                <div class="hero-content">
-                    <h1 class="hero-title">
-                        Crea tu <span class="gradient-text">Plan de Carrera</span> con IA
-                    </h1>
-                    <p class="hero-subtitle">
-                        Transforma tu futuro profesional con un plan personalizado generado por Groq AI.
-                        Aprende las habilidades que el mercado realmente necesita.
-                    </p>
-                    <div class="hero-cta">
-                        <button class="btn-primary" data-route="/register">
-                            Registrarse
-                        </button>
-                        <button class="btn-secondary" onclick="window.scrollToFeatures()">
-                            Ver Características
-                        </button>
-                    </div>
-                </div>
-                <div class="hero-visual">
-                    <div id="carrerbotMount" class="carrerbot-container carrerbot--hero"></div>
-                </div>
-            </div>
-        </section>
-    </div>
+        const landingContent = '';
 
-    <!-- Features Section -->
-    <section class="features" id="features">
-        <div class="container">
-            <h2 class="section-title">Características Principales</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🤖</div>
-                    <h3>Chat IA Integrado</h3>
-                    <p>Chatea con Groq AI para resolver dudas, recibir consejos y personalizar tu aprendizaje.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3>Proyectos Personalizados</h3>
-                    <p>Genera proyectos únicos basados en tus intereses, nivel y objetivos profesionales.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <h3>GitHub Tracking</h3>
-                    <p>Integra tu progreso directamente con GitHub y construye tu portfolio profesional.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+        const registerContent = '';
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>Plan Carrera Pro</h4>
-                    <p>El futuro del aprendizaje tecnológico impulsado por IA.</p>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 Plan Carrera Pro. Todos los derechos reservados.</p>
-            </div>
-        </div>
-    </footer>
-</div>
-        `;
+        const loginContent = '';
 
-        const registerContent = `
-<div class="register-page">
-  <div class="register-container">
-    <div class="floating-card card animate-fade-in">
-      <div class="text-center mb-6">
-        <h1 class="text-gradient text-3xl font-bold mb-2">Crear Cuenta</h1>
-        <p class="text-gray-600">Únete a miles de profesionales aprendiendo con IA</p>
-      </div>
-      <form class="register-form" id="registerForm">
-        <div class="form-group">
-          <label for="name" class="form-label">Nombre Completo</label>
-          <input type="text" id="name" name="name" required placeholder="Juan Pérez" class="input">
-        </div>
-        <div class="form-group">
-          <label for="email" class="form-label">Correo Electrónico</label>
-          <input type="email" id="email" name="email" required placeholder="juan@ejemplo.com" class="input">
-        </div>
-        <div class="form-group">
-          <label for="password" class="form-label">Contraseña</label>
-          <input type="password" id="password" name="password" required placeholder="Mínimo 6 caracteres" class="input">
-          <div class="text-sm mt-2" id="passwordStrength"></div>
-        </div>
-        <div class="form-group">
-          <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
-          <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Repite tu contraseña" class="input">
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Crear Cuenta</button>
-        <div class="form-footer mt-6 text-center">
-          <p class="text-gray-600">¿Ya tienes cuenta? <a href="#/login" class="text-primary" data-route="/login">Inicia sesión</a></p>
-        </div>
-      </form>
-    </div>
-    <div class="floating-card card animate-fade-in" style="animation-delay: 0.2s;">
-      <h2 class="text-gray-800 text-2xl font-semibold text-center mb-8">¿Por qué registrarte?</h2>
-      <div class="space-y-6">
-        <div class="card hover-lift">
-          <div class="flex items-center gap-4">
-            <div class="text-4xl w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center">🎯</div>
-            <div>
-              <h3 class="text-gray-800 text-lg font-semibold mb-1">Plan Personalizado</h3>
-              <p class="text-gray-600 text-sm">IA crea un plan único basado en tus objetivos</p>
-            </div>
-          </div>
-        </div>
-        <div class="card hover-lift">
-          <div class="flex items-center gap-4">
-            <div class="text-4xl w-16 h-16 bg-secondary-100 rounded-2xl flex items-center justify-center">🤖</div>
-            <div>
-              <h3 class="text-gray-800 text-lg font-semibold mb-1">Chat con Claude</h3>
-              <p class="text-gray-600 text-sm">Asistencia 24/7 para resolver dudas</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-(function(){
-  var form = document.getElementById('registerForm');
-  var pwd = document.getElementById('password');
-  var confirm = document.getElementById('confirmPassword');
-  var strengthEl = document.getElementById('passwordStrength');
-  if (pwd && strengthEl) {
-    pwd.addEventListener('input', function(){
-      var v = pwd.value, s = 0;
-      if (v.length >= 6) s++;
-      if (v.length >= 10) s++;
-      if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++;
-      if (/[0-9]/.test(v)) s++;
-      if (/[^a-zA-Z0-9]/.test(v)) s++;
-      var msg = s <= 1 ? 'Débil' : s <= 3 ? 'Media' : 'Fuerte';
-      strengthEl.textContent = 'Fortaleza: ' + msg;
-    });
-  }
-  if (confirm) {
-    confirm.addEventListener('input', function(){
-      if (pwd.value && confirm.value && pwd.value !== confirm.value) {
-        confirm.setCustomValidity('Las contraseñas no coinciden');
-      } else {
-        confirm.setCustomValidity('');
-      }
-    });
-  }
-  if (form) {
-    form.addEventListener('submit', function(e){
-      e.preventDefault();
-      if (pwd.value !== confirm.value) {
-        if (typeof showNotification === 'function') showNotification('Las contraseñas no coinciden', 'error');
-        return;
-      }
-      var userData = { name: document.getElementById('name').value, email: document.getElementById('email').value, password: pwd.value };
-      var users = JSON.parse(localStorage.getItem('users') || '[]');
-      users.push(userData);
-      localStorage.setItem('users', JSON.stringify(users));
-      localStorage.setItem('currentUser', JSON.stringify(userData));
-      if (typeof showNotification === 'function') showNotification('Cuenta creada', 'success');
-      setTimeout(function(){ router.navigate('/onboarding'); }, 300);
-    });
-  }
-})();
-<\/script>
-        `;
-
-        const loginContent = `
-<div class="login-page">
-  <div class="login-container">
-    <div class="floating-card card animate-fade-in">
-      <h1 class="text-gradient text-3xl font-bold mb-2">Iniciar Sesión</h1>
-      <p class="text-gray-600 mb-6">Bienvenido de vuelta a Plan Carrera Pro</p>
-      <form id="loginForm" class="mb-6">
-        <div class="form-group">
-          <label for="loginEmail" class="form-label">Email</label>
-          <input type="email" id="loginEmail" name="email" placeholder="tu@email.com" class="input" required>
-        </div>
-        <div class="form-group">
-          <label for="loginPassword" class="form-label">Contraseña</label>
-          <input type="password" id="loginPassword" name="password" placeholder="••••••••" class="input" required>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block">Iniciar Sesión</button>
-      </form>
-      <div class="mb-6 text-center">
-        <span class="text-gray-500">¿No tienes cuenta?</span>
-      </div>
-      <button class="btn btn-secondary btn-block" data-route="/register">Crear cuenta nueva</button>
-    </div>
-  </div>
-</div>
-<script>
-document.getElementById('loginForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  var email = document.getElementById('loginEmail').value;
-  var password = document.getElementById('loginPassword').value;
-  if (!email || !password) { alert('Por favor completa todos los campos'); return; }
-  var users = JSON.parse(localStorage.getItem('users') || '[]');
-  var user = users.find(function(u){ return u.email === email && u.password === password; });
-  if (user) {
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    if (typeof showNotification === 'function') showNotification('¡Bienvenido!', 'success');
-    setTimeout(function(){ router.navigate('/dashboard'); }, 300);
-  } else {
-    if (typeof showNotification === 'function') showNotification('Email o contraseña incorrectos', 'error');
-  }
-});
-<\/script>
-        `;
-
-        const onboardingContent = `
+        const __unusedOnboardingTemplate = `
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/onboarding.css">
 <div class="onboarding-page">
@@ -1275,8 +1019,9 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
 })();
 <\/script>
         `;
+        const onboardingContent = '';
 
-        const dashboardContent = `
+        const __unusedDashboardTemplate = `
 <div class="dashboard-page">
     <header class="dashboard-header">
         <div class="header-content">
@@ -1353,14 +1098,7 @@ function logout(){try{if(auth)auth.logout();if(router)router.navigate('/');}catc
 if(document.readyState!=='loading'){loadDashboard();if(window.initChatbotSidebar)window.initChatbotSidebar();}else document.addEventListener('DOMContentLoaded',function(){loadDashboard();if(window.initChatbotSidebar)window.initChatbotSidebar();});
 </scr` + `ipt>
         `;
-
-        // Definir rutas con contenido inline
-        router.addRoute('/', landingContent);
-        router.addRoute('/login', loginContent);
-        router.addRoute('/register', registerContent);
-        router.addRoute('/onboarding', onboardingContent);
-        router.addRoute('/dashboard', dashboardContent);
-        router.addRoute('/projects', '<div class="loading-state"><div class="loading-content"><div class="loading-spinner"></div><p>Cargando proyectos...</p></div></div>');
+        const dashboardContent = '';
 
         // Ocultar loading y mostrar primera ruta; se ejecuta al final, cuando todo está definido
         function hideLoadingScreen() {
